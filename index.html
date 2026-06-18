@@ -365,7 +365,6 @@
     </div>
   </div>
 
-  <!-- ─── CHART ROW ─── -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
     <div class="s-card">
       <div class="s-card-head">
@@ -407,14 +406,14 @@
 
   <div class="s-card">
     <div class="s-card-head">
-      <div class="s-card-title">📋 สรุปการทำงานล่าสุด (5 รายการ)</div>
+      <div class="s-card-title">📋 สรุปการทำงานล่าสุด</div>
     </div>
     <div class="tbl-wrap">
       <table id="dash-table">
         <thead>
           <tr>
             <th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
-            <th>ชนิดผลิตภัณฑ์ที่ Rework</th><th>หมายเลขล็อต</th>
+            <th>ชนิดผลิตภัณฑ์ที่ Rework</th><th>ล็อตการผลิต</th>
             <th style="text-align:right">ผลงาน (หีบ)</th>
           </tr>
         </thead>
@@ -441,8 +440,8 @@
             <option value="">-- เลือกกะ --</option>
             <option value="กะ UHT เครื่อง 1">กะ UHT เครื่อง 1</option>
             <option value="กะ UHT เครื่อง 8">กะ UHT เครื่อง 8</option>
-            <option value="กะพาส">กะพาส</option>
-            <option value="กะดึก">กะดึก</option>
+            <option value="กะ พาสเจอร์ไรส์">กะ พาสเจอร์ไรส์</option>
+            <option value="QC Line">QC Line</option>
           </select>
         </div>
       </div>
@@ -452,7 +451,7 @@
           <input type="text" id="f-hours" placeholder="เช่น 06-15, 12-21, 21-06">
         </div>
         <div class="form-group">
-          <label>หมายเลขล็อต (Lot Number)</label>
+          <label>ล็อตการผลิต (Lot Number)</label>
           <input type="text" id="f-lot" placeholder="เช่น 040227-M1">
         </div>
       </div>
@@ -479,7 +478,7 @@
           <input type="number" id="f-workers" min="0" value="0">
         </div>
         <div class="form-group">
-          <label>คนเหลือ / สแตนด์บาย</label>
+          <label>คนเหลือ / Rework</label>
           <input type="number" id="f-standby" min="0" value="0">
         </div>
         <div class="form-group">
@@ -508,10 +507,16 @@
       <option value="">กะทั้งหมด</option>
       <option value="กะ UHT เครื่อง 1">กะ UHT เครื่อง 1</option>
       <option value="กะ UHT เครื่อง 8">กะ UHT เครื่อง 8</option>
-      <option value="กะพาส">กะพาส</option>
+      <option value="กะ พาสเจอร์ไรส์">กะ พาสเจอร์ไรส์</option>
       <option value="กะดึก">กะดึก</option>
     </select>
     <input type="date" id="fil-date" onchange="renderRecords()">
+    
+    <select id="fil-sort" onchange="renderRecords()">
+      <option value="desc">วันที่: ใหม่สุด -> เก่าสุด</option>
+      <option value="asc">วันที่: เก่าสุด -> ใหม่สุด</option>
+    </select>
+
     <button class="btn-reset" onclick="resetFilters()">↺ รีเซ็ต</button>
     <span class="result-count" id="rec-count"></span>
   </div>
@@ -524,7 +529,7 @@
             <th>ชนิดผลิตภัณฑ์ที่ Rework</th>
             <th style="text-align:center">คนเข้าเครื่อง</th>
             <th style="text-align:center">คนเหลือ</th>
-            <th>หมายเลขล็อต</th>
+            <th>ล็อตการผลิต</th>
             <th style="text-align:right">ผลงาน (หีบ)</th>
             <th>หมายเหตุ</th>
             <th></th>
@@ -596,7 +601,6 @@
     document.getElementById('current-month').textContent =
       new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
     
-    // แมปฟังก์ชันของระบบ Module เข้ากับระบบ onclick บนปุ่ม HTML เดิมของคุณ
     window.switchTab = switchTab;
     window.saveRecord = saveRecord;
     window.clearForm = clearForm;
@@ -609,7 +613,6 @@
     window.exportDailyExcel = exportDailyExcel;
     window.exportDailyPDF = exportDailyPDF;
 
-    // ทำการดึงข้อมูลทั้งหมดจากคลาวด์ลงมาทันทีที่เปิดเว็บ
     await loadRecords();
   };
 
@@ -634,7 +637,6 @@
       console.error("Firebase Error:", e);
     }
 
-    // กรณีไม่มีเน็ต หรือ Firebase ว่างเปล่า
     const localData = localStorage.getItem('rework_records_local');
     if (localData) {
       records = JSON.parse(localData);
@@ -668,8 +670,8 @@
     const map = {
       'กะ UHT เครื่อง 1':'badge-uht1',
       'กะ UHT เครื่อง 8':'badge-uht8',
-      'กะพาส':'badge-past',
-      'กะดึก':'badge-night'
+      'กะ พาสเจอร์ไรส์':'badge-past',
+      'QC Line':'badge-night'
     };
     return `<span class="badge ${map[s]||''}">${s}</span>`;
   }
@@ -688,7 +690,6 @@
   let chartWorkers = null;
 
   function renderCharts() {
-    // รวมข้อมูลตามวัน (7 วันล่าสุด)
     const dayMap = {};
     records.forEach(r => {
       if (!dayMap[r.date]) dayMap[r.date] = { production: 0, workers: 0, standby: 0 };
@@ -699,16 +700,11 @@
     const sortedDays = Object.keys(dayMap).sort().slice(-7);
     const dayLabels = sortedDays.map(d => fmtDate(d));
     const prodData    = sortedDays.map(d => dayMap[d].production);
-    const workerData  = sortedDays.map(d => dayMap[d].workers);
-    const standbyData = sortedDays.map(d => dayMap[d].standby);
 
-    // สัดส่วนกะ
-    const shiftNames = ['กะ UHT เครื่อง 1','กะ UHT เครื่อง 8','กะพาส','กะดึก'];
+    const shiftNames = ['กะ UHT เครื่อง 1','กะ UHT เครื่อง 8','กะ พาสเจอร์ไรส์','QC Line'];
     const shiftColors = ['#433D8B','#F6A623','#17C3B2','#E05C8A'];
-    const shiftPatterns = ['', '--', '..', '-.'];
     const shiftCounts = shiftNames.map(s => records.filter(r => r.shift === s).length);
 
-    // ─ กราฟ 1: ผลผลิตรายวัน ─
     if (chartProduction) chartProduction.destroy();
     const ctx1 = document.getElementById('chart-production');
     if (ctx1) {
@@ -736,7 +732,6 @@
       });
     }
 
-    // ─ กราฟ 2: Donut กะ ─
     if (chartShift) chartShift.destroy();
     const ctx2 = document.getElementById('chart-shift');
     if (ctx2) {
@@ -766,7 +761,6 @@
       ).join('');
     }
 
-    // ─ กราฟ 3: Product Types Donut ─
     if (chartWorkers) chartWorkers.destroy();
     const ctx3 = document.getElementById('chart-products');
     if (ctx3) {
@@ -819,7 +813,6 @@
     document.getElementById('kpi-production').textContent = total.toLocaleString();
     document.getElementById('kpi-shifts').textContent = records.length;
 
-    // Product type counts
     const productMap = {};
     records.forEach(r => {
       const p = r.task || '—';
@@ -963,7 +956,7 @@
     const wb = XLSX.utils.book_new();
     const headers = [
       'วันที่', 'กะทำงาน', 'เวลาทำงาน', 'ชื่องาน / กิจกรรม',
-      'จำนวนคนเข้าเครื่อง', 'คนเหลือ', 'หมายเลขล็อต',
+      'จำนวนคนเข้าเครื่อง', 'คนเหลือ', 'ล็อตการผลิต',
       'ผลงาน จำนวนหีบ', 'หมายเหตุ'
     ];
     const rows = records.map(r => [
@@ -1119,24 +1112,24 @@
     const kpiHtml = `
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
       <div class="kpi-card c1" data-icon="📦">
-        <div class="kpi-label">ผลผลิตรวม</div>
-        <div class="kpi-value" style="font-size:26px;">${totalP.toLocaleString()}</div>
+        <div class="kpi-label">จำนวนที่ได้ (ผลผลิตรวม)</div>
+        <div class="kpi-value" style="font-size:30px;">${totalP.toLocaleString()}</div>
         <div class="kpi-sub">จำนวนหีบ</div>
       </div>
-      <div class="kpi-card c2" data-icon="🥛">
+      <div class="kpi-card c2" data-icon="👥">
+        <div class="kpi-label">จำนวนคนที่ใช้Rework</div>
+        <div class="kpi-value" style="font-size:30px;">${totalW.toLocaleString()}</div>
+        <div class="kpi-sub">คนเข้าเครื่องรวม</div>
+      </div>
+      <div class="kpi-card c3" data-icon="🥛">
         <div class="kpi-label">ชนิดสินค้า Rework</div>
-        <div class="kpi-value" style="font-size:26px;">${productTypes.length}</div>
+        <div class="kpi-value" style="font-size:30px;">${productTypes.length}</div>
         <div class="kpi-sub">ชนิดผลิตภัณฑ์</div>
       </div>
-      <div class="kpi-card c3" data-icon="🔢">
-        <div class="kpi-label">สินค้า Rework สูงสุด</div>
-        <div class="kpi-value" style="font-size:14px;line-height:1.4;">${productTypes[0]||'—'}</div>
-        <div class="kpi-sub">ชนิดแรกในวันนี้</div>
-      </div>
       <div class="kpi-card c4" data-icon="🔄">
-        <div class="kpi-label">จำนวนกะ</div>
-        <div class="kpi-value" style="font-size:26px;">${dayRecords.length}</div>
-        <div class="kpi-sub">รายการ</div>
+        <div class="kpi-label">จำนวนรายการ</div>
+        <div class="kpi-value" style="font-size:30px;">${dayRecords.length}</div>
+        <div class="kpi-sub">รายการที่บันทึกวันนี้</div>
       </div>
     </div>`;
 
@@ -1148,9 +1141,11 @@
       <div class="s-card-body">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;font-size:14px;">
           <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ชนิดผลิตภัณฑ์ที่ Rework</div><div style="margin-top:4px;font-weight:600;color:var(--pu-main);">${r.task}</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเลขล็อต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">จำนวนคนที่ใช้Rework (เข้าเครื่อง)</div><div style="margin-top:4px;">${r.workers} คน</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">คนเหลือ (Standby)</div><div style="margin-top:4px;">${r.standby} คน</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ล็อตการผลิต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
           <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเหตุ</div><div style="margin-top:4px;">${r.remarks||'—'}</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ผลงาน (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">จำนวนที่ได้ (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
         </div>
       </div>
     </div>`).join('');
@@ -1161,12 +1156,17 @@
         <td>${shiftBadge(r.shift)}</td>
         <td style="text-align:center;">${r.hours||'—'}</td>
         <td>${r.task}</td>
+        <td style="text-align:center;">${r.workers}</td>
+        <td style="text-align:center;">${r.standby}</td>
         <td style="font-size:12px;color:var(--text-sub);">${r.lot||'—'}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main);">${Number(r.production).toLocaleString()}</td>
         <td style="font-size:12px;color:var(--text-sub);">${r.remarks||'—'}</td>
       </tr>`).join('') +
       `<tr class="total-row">
-        <td colspan="5">รวมประจำวัน</td>
+        <td colspan="4" style="text-align:right;padding-right:16px;">รวมประจำวัน</td>
+        <td style="text-align:center;">${totalW}</td>
+        <td style="text-align:center;">${totalS}</td>
+        <td></td>
         <td style="text-align:right;">${totalP.toLocaleString()}</td>
         <td></td>
       </tr>`;
@@ -1194,6 +1194,7 @@
           <table>
             <thead><tr>
               <th>#</th><th>กะทำงาน</th><th>เวลา</th><th>ชนิดผลิตภัณฑ์ที่ Rework</th>
+              <th style="text-align:center">คนเข้าเครื่อง</th><th style="text-align:center">คนเหลือ</th>
               <th>ล็อตนัมเบอร์</th><th style="text-align:right">ผลงาน (หีบ)</th><th>หมายเหตุ</th>
             </tr></thead>
             <tbody>${summaryRows}</tbody>
@@ -1214,7 +1215,7 @@
     const totalW = dayRecords.reduce((a,r)=>a+r.workers,0);
     const totalS = dayRecords.reduce((a,r)=>a+r.standby,0);
     const totalP = dayRecords.reduce((a,r)=>a+Number(r.production),0);
-    const headers = ['กะทำงาน','เวลาทำงาน','ชื่องาน / กิจกรรม','คนเข้าเครื่อง','คนเหลือ','หมายเลขล็อต','ผลงาน (หีบ)','หมายเหตุ'];
+    const headers = ['กะทำงาน','เวลาทำงาน','ชื่องาน / กิจกรรม','คนเข้าเครื่อง','คนเหลือ','ล็อตการผลิต','ผลงาน (หีบ)','หมายเหตุ'];
     const rows = dayRecords.map(r => [r.shift, r.hours||'', r.task, r.workers, r.standby, r.lot||'', Number(r.production), r.remarks||'']);
     const ws = XLSX.utils.aoa_to_sheet([
       [`รายงานการปฏิบัติงานประจำวันที่ ${thaiDate}`],
