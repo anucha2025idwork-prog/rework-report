@@ -1,704 +1,1085 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกรายงานการ Rework ประจำวัน</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- SheetJS for Excel Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบบันทึกการทำงานประจำวัน</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pu-dark:   #2E236C;
+    --pu-main:   #433D8B;
+    --pu-mid:    #6B5EBD;
+    --pu-light:  #E8E5F8;
+    --pu-pale:   #F5F4FC;
+    --teal:      #17C3B2;
+    --teal-dark: #0D9A8C;
+    --amber:     #F6A623;
+    --rose:      #E05C8A;
+    --green:     #27AE60;
+    --red:       #E74C3C;
+    --text:      #1A1A2E;
+    --text-sub:  #6B6B8A;
+    --border:    #DDD9F0;
+    --bg:        #F8F7FF;
+    --card:      #FFFFFF;
+    --shadow:    0 2px 12px rgba(67,61,139,.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+  }
 
-    <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f1f5f9;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        /* Custom scrollbar for table */
-        .table-container::-webkit-scrollbar {
-            height: 6px;
-            width: 6px;
-        }
-        .table-container::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .table-container::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-    </style>
+  /* ─── HEADER ─── */
+  .app-header {
+    background: linear-gradient(135deg, var(--pu-dark) 0%, var(--pu-main) 60%, var(--pu-mid) 100%);
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 20px rgba(46,35,108,.25);
+  }
+  .app-header .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .app-header .logo-icon {
+    width: 36px; height: 36px; background: rgba(255,255,255,.15);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .app-header .logo-text {
+    color: #fff; font-size: 17px; font-weight: 600; letter-spacing: .3px;
+  }
+  .app-header .logo-sub {
+    color: rgba(255,255,255,.65); font-size: 12px; margin-top: 1px;
+  }
+  .header-right {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .btn-export {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 16px; border-radius: 8px; border: none;
+    font-family: 'Sarabun', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .18s;
+  }
+  .btn-excel {
+    background: #1D6F42; color: #fff;
+  }
+  .btn-excel:hover { background: #155234; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,111,66,.35); }
+  .btn-pdf {
+    background: #C0392B; color: #fff;
+  }
+  .btn-pdf:hover { background: #962d22; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(192,57,43,.35); }
+
+  /* ─── TABS ─── */
+  .tabs-wrap {
+    background: var(--card);
+    border-bottom: 1.5px solid var(--border);
+    padding: 0 32px;
+    display: flex; gap: 4px;
+  }
+  .tab-btn {
+    padding: 14px 20px; border: none; background: none;
+    font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 500;
+    color: var(--text-sub); cursor: pointer;
+    border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+    transition: all .15s; display: flex; align-items: center; gap: 7px;
+  }
+  .tab-btn:hover { color: var(--pu-main); }
+  .tab-btn.active {
+    color: var(--pu-main); font-weight: 600;
+    border-bottom-color: var(--pu-main);
+  }
+
+  /* ─── LAYOUT ─── */
+  .page { display: none; padding: 28px 32px; }
+  .page.active { display: block; }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--card); border-radius: 14px;
+    padding: 20px 20px 16px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::after {
+    content: attr(data-icon);
+    position: absolute; right: 14px; top: 14px;
+    font-size: 28px; opacity: .12;
+  }
+  .kpi-card.c1 { border-left-color: var(--pu-main); }
+  .kpi-card.c2 { border-left-color: var(--teal); }
+  .kpi-card.c3 { border-left-color: var(--amber); }
+  .kpi-card.c4 { border-left-color: var(--rose); }
+  .kpi-label { font-size: 12px; color: var(--text-sub); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi-value { font-size: 30px; font-weight: 700; margin: 6px 0 4px; }
+  .kpi-card.c1 .kpi-value { color: var(--pu-main); }
+  .kpi-card.c2 .kpi-value { color: var(--teal-dark); }
+  .kpi-card.c3 .kpi-value { color: #C17D0F; }
+  .kpi-card.c4 .kpi-value { color: var(--rose); }
+  .kpi-sub { font-size: 12px; color: var(--text-sub); }
+
+  /* ─── SECTION CARD ─── */
+  .s-card {
+    background: var(--card); border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .s-card-head {
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--pu-pale);
+  }
+  .s-card-title {
+    font-size: 14px; font-weight: 600; color: var(--pu-dark);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .s-card-body { padding: 20px; }
+
+  /* ─── TABLE ─── */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th {
+    background: var(--pu-main); color: #fff;
+    padding: 10px 12px; text-align: left;
+    font-weight: 600; font-size: 12.5px; white-space: nowrap;
+  }
+  th:first-child { border-radius: 0; }
+  td {
+    padding: 9px 12px; border-bottom: 1px solid var(--border);
+    vertical-align: middle; color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--pu-pale); }
+  tbody tr:nth-child(even) td { background: #FAFAFE; }
+  tbody tr:nth-child(even):hover td { background: var(--pu-pale); }
+  .total-row td {
+    background: var(--pu-dark) !important;
+    color: #fff !important; font-weight: 700;
+    border-bottom: none;
+  }
+
+  /* ─── BADGES ─── */
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  .badge-uht1 { background: #EAE8F8; color: #433D8B; }
+  .badge-uht8 { background: #FEF3C7; color: #92400E; }
+  .badge-past { background: #D1FAE5; color: #065F46; }
+  .badge-night{ background: #F3E8FF; color: #6B21A8; }
+
+  /* ─── FORM ─── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .form-grid-1 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label {
+    font-size: 12.5px; font-weight: 600; color: var(--pu-dark);
+  }
+  .form-group label span { color: var(--red); }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 9px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-family: 'Sarabun', sans-serif;
+    font-size: 14px; color: var(--text); background: var(--card);
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--pu-mid); box-shadow: 0 0 0 3px rgba(107,94,189,.15);
+  }
+  .form-group textarea { resize: vertical; min-height: 72px; }
+  .form-actions {
+    display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px;
+  }
+  .btn-save {
+    background: var(--pu-main); color: #fff;
+    border: none; padding: 10px 24px; border-radius: 9px;
+    font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all .16s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-save:hover { background: var(--pu-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(67,61,139,.3); }
+  .btn-clear {
+    background: transparent; color: var(--text-sub);
+    border: 1.5px solid var(--border); padding: 10px 20px; border-radius: 9px;
+    font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-clear:hover { background: var(--bg); color: var(--text); }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: #1A1A2E; color: #fff;
+    padding: 13px 20px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    display: flex; align-items: center; gap: 9px;
+    transform: translateY(80px); opacity: 0;
+    transition: all .3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 4px solid var(--teal); }
+  .toast.error   { border-left: 4px solid var(--red); }
+  .toast.info    { border-left: 4px solid var(--amber); }
+
+  /* ─── FILTER BAR ─── */
+  .filter-bar {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-bar select,
+  .filter-bar input[type=date] {
+    padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-family: 'Sarabun', sans-serif;
+    font-size: 13px; color: var(--text); background: var(--card);
+    outline: none;
+  }
+  .filter-bar select:focus,
+  .filter-bar input:focus { border-color: var(--pu-mid); }
+  .btn-reset {
+    background: none; border: 1.5px solid var(--border);
+    padding: 8px 14px; border-radius: 8px;
+    font-family: 'Sarabun', sans-serif; font-size: 13px;
+    cursor: pointer; color: var(--text-sub);
+  }
+  .btn-reset:hover { background: var(--bg); }
+  .result-count {
+    margin-left: auto; font-size: 12.5px; color: var(--text-sub);
+  }
+  .del-btn {
+    background: none; border: none; color: #ccc; cursor: pointer;
+    font-size: 16px; padding: 3px 7px; border-radius: 6px;
+    transition: all .15s; line-height: 1;
+  }
+  .del-btn:hover { background: #FEE2E2; color: var(--red); }
+
+  /* ─── DIVIDER ─── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+  /* ─── MONTH HEADER ─── */
+  .month-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .month-badge {
+    background: var(--pu-light); color: var(--pu-dark);
+    padding: 5px 14px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+  }
+  .dept-info {
+    font-size: 13px; color: var(--text-sub);
+    display: flex; gap: 16px;
+  }
+  .dept-info span b { color: var(--pu-dark); }
+
+  /* ─── PRINT/EXPORT ONLY ─── */
+  @media print {
+    .app-header, .tabs-wrap, .filter-bar, .del-btn, .form-actions { display: none; }
+  }
+</style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-industry text-2xl text-indigo-300"></i>
-                    <div>
-                        <h1 class="text-lg font-bold tracking-wide">REWORK MANAGEMENT</h1>
-                        <p class="text-xs text-indigo-200">ระบบบันทึกและติดตามงานแก้ไขประจำวัน</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-2 bg-indigo-800 px-3 py-1.5 rounded-lg text-sm border border-indigo-700">
-                    <i class="fa-solid fa-calendar-days text-indigo-300"></i>
-                    <span id="current-date-display">กำลังโหลดวันที่...</span>
-                </div>
-            </div>
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">📋</div>
+    <div>
+      <div class="logo-text">ระบบบันทึกการทำงานประจำวัน</div>
+      <div class="logo-sub">แผนกหีบห่อ UHT/PAST</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn-export btn-excel" onclick="exportExcel()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Export Excel
+    </button>
+    <button class="btn-export btn-pdf" onclick="exportPDF()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+      Export PDF
+    </button>
+  </div>
+</header>
+
+<nav class="tabs-wrap">
+  <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('form',this)">➕ บันทึกข้อมูล</button>
+  <button class="tab-btn" onclick="switchTab('records',this)">📄 ข้อมูลทั้งหมด</button>
+  <button class="tab-btn" onclick="switchTab('daily',this)">📅 รายงานประจำวัน</button>
+</nav>
+
+<div class="page active" id="page-dashboard">
+  <div class="month-row">
+    <div>
+      <div style="font-size:20px;font-weight:700;color:var(--pu-dark)">ภาพรวมประจำเดือน</div>
+      <div style="font-size:13px;color:var(--text-sub);margin-top:3px">ข้อมูลอัปเดตอัตโนมัติจากการบันทึก</div>
+    </div>
+    <div class="dept-info">
+      <span><b>แผนก:</b> หีบห่อ UHT/PAST</span>
+      <span><b>ผู้ตรวจสอบ:</b> อนุชา / ดนุวัฒน์ / ศศินา</span>
+      <span class="month-badge" id="current-month"></span>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card c1" data-icon="📦">
+      <div class="kpi-label">ผลผลิตรวม</div>
+      <div class="kpi-value" id="kpi-production">0</div>
+      <div class="kpi-sub">จำนวนหีบทั้งหมด</div>
+    </div>
+    <div class="kpi-card c2" data-icon="👷">
+      <div class="kpi-label">คนเข้าเครื่อง</div>
+      <div class="kpi-value" id="kpi-workers">0</div>
+      <div class="kpi-sub">คนทำงานรวม</div>
+    </div>
+    <div class="kpi-card c3" data-icon="⏳">
+      <div class="kpi-label">คนRework</div>
+      <div class="kpi-value" id="kpi-standby">0</div>
+      <div class="kpi-sub">คนเหลือรวม</div>
+    </div>
+    <div class="kpi-card c4" data-icon="🔄">
+      <div class="kpi-label">รายการทั้งหมด</div>
+      <div class="kpi-value" id="kpi-shifts">0</div>
+      <div class="kpi-sub">รายการที่บันทึก</div>
+    </div>
+  </div>
+
+  <div class="s-card">
+    <div class="s-card-head">
+      <div class="s-card-title">📋 สรุปการทำงานล่าสุด (5 รายการ)</div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="dash-table">
+        <thead>
+          <tr>
+            <th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
+            <th>ชื่องาน / กิจกรรม</th><th style="text-align:center">คนเข้าเครื่อง</th>
+            <th style="text-align:center">คนเหลือ</th><th>หมายเลขล็อต</th>
+            <th style="text-align:right">ผลงาน (หีบ)</th>
+          </tr>
+        </thead>
+        <tbody id="dash-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-form">
+  <div class="s-card">
+    <div class="s-card-head">
+      <div class="s-card-title">✏️ บันทึกข้อมูลการทำงานประจำวัน</div>
+    </div>
+    <div class="s-card-body">
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>วันที่ (Date) <span>*</span></label>
+          <input type="date" id="f-date">
         </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-        <!-- Navigation Tabs -->
-        <div class="bg-white rounded-xl shadow-sm p-2 mb-6 flex flex-wrap gap-2 border border-slate-200">
-            <button onclick="switchTab('entry-form-tab')" id="btn-entry-form-tab" class="tab-btn flex-1 min-w-[140px] py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 bg-indigo-600 text-white shadow-sm">
-                <i class="fa-solid fa-pen-to-square"></i>
-                <span>บันทึกข้อมูล Rework</span>
-            </button>
-            <button onclick="switchTab('daily-report-tab')" id="btn-daily-report-tab" class="tab-btn flex-1 min-w-[140px] py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
-                <i class="fa-solid fa-file-invoice"></i>
-                <span>รายงานประจำวัน</span>
-            </button>
-            <button onclick="switchTab('summary-dashboard-tab')" id="btn-summary-dashboard-tab" class="tab-btn flex-1 min-w-[140px] py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span>แดชบอร์ดสรุปผล</span>
-            </button>
+        <div class="form-group">
+          <label>กะทำงาน (Shift) <span>*</span></label>
+          <select id="f-shift">
+            <option value="">-- เลือกกะ --</option>
+            <option value="กะ UHT เครื่อง 1">กะ UHT เครื่อง 1</option>
+            <option value="กะ UHT เครื่อง 8">กะ UHT เครื่อง 8</option>
+            <option value="กะพาส">กะพาส</option>
+            <option value="กะดึก">กะดึก</option>
+          </select>
         </div>
-
-        <!-- TAB 1: ENTRY FORM -->
-        <div id="entry-form-tab" class="tab-content active space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-                    <div class="flex items-center space-x-2 text-slate-800">
-                        <i class="fa-solid fa-list-check text-indigo-600"></i>
-                        <h2 class="font-semibold text-base">ฟอร์มบันทึกรายละเอียดหีบห่อที่ตรวจพบงาน Rework</h2>
-                    </div>
-                    <span class="text-xs bg-amber-100 text-amber-800 font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>กำลังกรอกข้อมูล
-                    </span>
-                </div>
-                
-                <form id="reworkForm" class="p-6 space-y-6" onsubmit="handleFormSubmit(event)">
-                    <!-- Grid Layout for Inputs -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                        
-                        <!-- วันที่ตรวจพบ -->
-                        <div class="space-y-1.5">
-                            <label class="block text-sm font-medium text-slate-700">วันที่ตรวจพบ <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-calendar"></i>
-                                </span>
-                                <input type="date" id="checkDate" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                            </div>
-                        </div>
-
-                        <!-- หมายเลขลอท -->
-                        <div class="space-y-1.5">
-                            <label class="block text-sm font-medium text-slate-700">หมายเลขลอท (Lot No.) <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-barcode"></i>
-                                </span>
-                                <input type="text" id="lotNo" placeholder="ตัวอย่าง: L2405-001" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all uppercase">
-                            </div>
-                        </div>
-
-                        <!-- หมายเลขหีบห่อ -->
-                        <div class="space-y-1.5">
-                            <label class="block text-sm font-medium text-slate-700">หมายเลขหีบห่อ (Box ID) <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-box"></i>
-                                </span>
-                                <input type="text" id="boxId" placeholder="ตัวอย่าง: BOX-015" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all uppercase">
-                            </div>
-                        </div>
-
-                        <!-- แผนกที่ตรวจพบ -->
-                        <div class="space-y-1.5">
-                            <label class="block text-sm font-medium text-slate-700">แผนกที่ตรวจพบ <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-building"></i>
-                                </span>
-                                <select id="department" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none">
-                                    <option value="" disabled selected>เลือกแผนก...</option>
-                                    <option value="QC">ฝ่ายควบคุมคุณภาพ (QC)</option>
-                                    <option value="Production-A">ฝ่ายผลิต ไลน์ A</option>
-                                    <option value="Production-B">ฝ่ายผลิต ไลน์ B</option>
-                                    <option value="Packing">ฝ่ายบรรจุภัณฑ์ (Packing)</option>
-                                    <option value="Warehouse">คลังสินค้า (Warehouse)</option>
-                                </select>
-                                <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs">
-                                    <i class="fa-solid fa-chevron-down"></i>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- อาการเสีย/ปัญหาที่พบ -->
-                        <div class="space-y-1.5 md:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700">อาการเสีย / ปัญหาที่พบ <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-triangle-exclamation"></i>
-                                </span>
-                                <select id="defectType" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all appearance-none">
-                                    <option value="" disabled selected>เลือกประเภทอาการเสีย...</option>
-                                    <option value="ขนาดไม่ได้มาตรฐาน">ขนาด/มิติ ไม่ได้มาตรฐานตามสเปก</option>
-                                    <option value="ผิวงานเป็นรอย/ตำหนิ">พื้นผิวเป็นรอยขีดข่วน / มีตำหนิเด่นชัด</option>
-                                    <option value="สีเพี้ยน/ไม่สม่ำเสมอ">สีสันผิดเพี้ยน / การชุบสีไม่สม่ำเสมอ</option>
-                                    <option value="ชิ้นส่วนประกอบไม่แน่น">การประกอบไม่สมบูรณ์ / ชิ้นส่วนหลวม</option>
-                                    <option value="บรรจุภัณฑ์ชำรุด">บรรจุภัณฑ์ภายนอกบุบสลายหรือชำรุด</option>
-                                    <option value="อื่นๆ">อื่นๆ (ระบุเพิ่มเติมในรายละเอียด)</option>
-                                </select>
-                                <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs">
-                                    <i class="fa-solid fa-chevron-down"></i>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- จำนวนงานเสียในหีบห่อ -->
-                        <div class="space-y-1.5">
-                            <label class="block text-sm font-medium text-slate-700">จำนวนของเสีย (ชิ้น) <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-arrow-up-1-9"></i>
-                                </span>
-                                <input type="number" id="defectQty" min="1" placeholder="0" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                            </div>
-                        </div>
-
-                        <!-- ชื่อผู้ตรวจสอบ -->
-                        <div class="space-y-1.5">
-                            <label class="block text-sm font-medium text-slate-700">ชื่อผู้บันทึก/ตรวจสอบ <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                    <i class="fa-solid fa-user-check"></i>
-                                </span>
-                                <input type="text" id="inspectorName" placeholder="ชื่อ-นามสกุล" required class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
-                            </div>
-                        </div>
-
-                        <!-- รายละเอียดเพิ่มเติม -->
-                        <div class="space-y-1.5 md:col-span-4">
-                            <label class="block text-sm font-medium text-slate-700">รายละเอียดเพิ่มเติม หรือ แนวทางการแก้ไขเบื้องต้น</label>
-                            <textarea id="remark" rows="3" placeholder="ระบุข้อมูลเพิ่มเติมที่เป็นประโยชน์ต่อการแก้ไขงาน (ถ้ามี)..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"></textarea>
-                        </div>
-
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
-                        <button type="button" onclick="resetForm()" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center space-x-1.5">
-                            <i class="fa-solid fa-arrow-rotate-left"></i>
-                            <span>ล้างฟอร์ม</span>
-                        </button>
-                        <button type="submit" class="px-6 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors flex items-center space-x-1.5">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            <span>บันทึกข้อมูลลงระบบ</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+      </div>
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>เวลาทำงาน (Working Hours)</label>
+          <input type="text" id="f-hours" placeholder="เช่น 06-15, 12-21, 21-06">
         </div>
-
-        <!-- TAB 2: DAILY REPORT -->
-        <div id="daily-report-tab" class="tab-content space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <!-- Filter Section Header -->
-                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center space-x-2 text-slate-800">
-                        <i class="fa-solid fa-magnifying-glass text-indigo-600"></i>
-                        <h2 class="font-semibold text-base">ตัวกรองและตารางข้อมูลรายงานประจำวัน</h2>
-                    </div>
-                    <!-- แก้ไขแท็ก style ซ้อนตรงนี้แล้วเพื่อให้ระบบทำงานได้ถูกต้อง -->
-                    <div class="flex items-center gap-2" id="daily-export-btns" style="margin-left:auto; display:flex; gap:8px; display:none!important;">
-                        <button onclick="exportToExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium flex items-center space-x-1.5 shadow-sm transition-colors">
-                            <i class="fa-solid fa-file-excel"></i>
-                            <span>ส่งออก Excel</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filters Inputs Row -->
-                <div class="p-6 bg-slate-50/50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">เลือกวันที่เรียกดู</label>
-                        <input type="date" id="filterDate" onchange="loadDailyReport()" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">ค้นหาด่วน (Lot No. / Box ID)</label>
-                        <div class="relative">
-                            <input type="text" id="filterSearch" oninput="filterTableData()" placeholder="พิมพ์คำค้นหา..." class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 text-xs">
-                                <i class="fa-solid fa-search"></i>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">กรองตามแผนก</label>
-                        <select id="filterDept" onchange="filterTableData()" class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="ALL">ทั้งหมดทุกแผนก</option>
-                            <option value="QC">ฝ่ายควบคุมคุณภาพ (QC)</option>
-                            <option value="Production-A">ฝ่ายผลิต ไลน์ A</option>
-                            <option value="Production-B">ฝ่ายผลิต ไลน์ B</option>
-                            <option value="Packing">ฝ่ายบรรจุภัณฑ์ (Packing)</option>
-                            <option value="Warehouse">คลังสินค้า (Warehouse)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Table Content -->
-                <div class="table-container overflow-x-auto w-full">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-indigo-900/5 text-indigo-950 border-b border-slate-200 text-xs font-bold uppercase tracking-wider">
-                                <th class="py-3 px-4 text-center w-12">ลำดับ</th>
-                                <th class="py-3 px-4">วันที่พบ</th>
-                                <th class="py-3 px-4">Lot No.</th>
-                                <th class="py-3 px-4">Box ID</th>
-                                <th class="py-3 px-4">แผนกที่พบ</th>
-                                <th class="py-3 px-4">อาการเสีย / ปัญหา</th>
-                                <th class="py-3 px-4 text-right">จำนวน (ชิ้น)</th>
-                                <th class="py-3 px-4">ผู้ตรวจสอบ</th>
-                                <th class="py-3 px-4 max-w-xs truncate">รายละเอียด</th>
-                                <th class="py-3 px-4 text-center w-20">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reportTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                            <!-- Rows dynamic load here -->
-                            <tr>
-                                <td colspan="10" class="py-12 text-center text-slate-400">
-                                    <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
-                                    กรุณาเลือกวันที่ต้องการเรียกดูรายงานข้อมูล
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Table Footer Summary -->
-                <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between text-sm font-semibold text-slate-700">
-                    <div>พบทั้งหมด <span id="summary-total-records" class="text-indigo-600 font-bold">0</span> รายการหีบห่อ</div>
-                    <div>รวมจำนวนงานเสียทั้งสิ้น: <span id="summary-total-qty" class="text-rose-600 font-bold text-base">0</span> ชิ้น</div>
-                </div>
-            </div>
+        <div class="form-group">
+          <label>หมายเลขล็อต (Lot Number)</label>
+          <input type="text" id="f-lot" placeholder="เช่น 040227-M1">
         </div>
-
-        <!-- TAB 3: SUMMARY DASHBOARD -->
-        <div id="summary-dashboard-tab" class="tab-content space-y-6">
-            <!-- Summary KPI Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3.5 bg-indigo-50 text-indigo-600 rounded-lg text-xl"><i class="fa-solid fa-boxes-stacked"></i></div>
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">จำนวนหีบห่อเสียสะสม</p>
-                        <h3 id="dash-total-boxes" class="text-2xl font-bold text-slate-800 mt-0.5">0</h3>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3.5 bg-rose-50 text-rose-600 rounded-lg text-xl"><i class="fa-solid fa-dumpster-fire"></i></div>
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">จำนวนชิ้นงานเสียสะสม</p>
-                        <h3 id="dash-total-pieces" class="text-2xl font-bold text-rose-600 mt-0.5">0</h3>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3.5 bg-amber-50 text-amber-600 rounded-lg text-xl"><i class="fa-solid fa-circle-exclamation"></i></div>
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">เฉลี่ยของเสีย / หีบห่อ</p>
-                        <h3 id="dash-avg-defect" class="text-2xl font-bold text-slate-800 mt-0.5">0.0</h3>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-lg text-xl"><i class="fa-solid fa-building-circle-check"></i></div>
-                    <div>
-                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">แผนกที่พบเหตุบ่อยสุด</p>
-                        <h3 id="dash-top-dept" class="text-lg font-bold text-emerald-700 mt-1 truncate max-w-[160px]">-</h3>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Visual Charts Breakdown Placeholder -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Breakdown by Defect Type -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2"><i class="fa-solid fa-chart-bar text-indigo-500 mr-1.5"></i> สรุปสัดส่วนตามกลุ่มอาการเสีย (จำนวนชิ้น)</h3>
-                    <div id="chart-defect-container" class="space-y-3.5">
-                        <p class="text-center py-8 text-slate-400 text-sm">ไม่มีข้อมูลการวิเคราะห์ในระบบคลาวด์</p>
-                    </div>
-                </div>
-                <!-- Breakdown by Department -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2"><i class="fa-solid fa-chart-gantt text-indigo-500 mr-1.5"></i> ลำดับเหตุการณ์แยกตามฝ่าย/แผนก (จำนวนครั้ง)</h3>
-                    <div id="chart-dept-container" class="space-y-3.5">
-                        <p class="text-center py-8 text-slate-400 text-sm">ไม่มีข้อมูลการวิเคราะห์ในระบบคลาวด์</p>
-                    </div>
-                </div>
-            </div>
+      </div>
+      <div class="form-grid-1" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>ชื่องาน / กิจกรรม (Task / Activity) <span>*</span></label>
+          <input type="text" id="f-task" placeholder="เช่น Rework จืด180 Non shrink">
         </div>
-
-    </main>
-
-    <!-- Footer Copyright -->
-    <footer class="bg-slate-800 text-slate-400 text-center py-4 text-xs border-t border-slate-700 mt-12">
-        <div class="max-w-7xl mx-auto px-4">
-            &copy; 2026 ระบบสารสนเทศโรงงานอัจฉริยะ ซิงค์ข้อมูลอัตโนมัติผ่านคลาวด์ปลอดภัยระดับสากล
+      </div>
+      <div class="form-grid-3" style="margin-bottom:14px">
+        <div class="form-group">
+          <label>จำนวนคนเข้าเครื่อง</label>
+          <input type="number" id="f-workers" min="0" value="0">
         </div>
-    </footer>
+        <div class="form-group">
+          <label>คนเหลือ / สแตนด์บาย</label>
+          <input type="number" id="f-standby" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label>ผลงาน จำนวนหีบ (Actual Production)</label>
+          <input type="number" id="f-production" min="0" value="0">
+        </div>
+      </div>
+      <div class="form-grid-1">
+        <div class="form-group">
+          <label>หมายเหตุ (Remarks)</label>
+          <textarea id="f-remarks" placeholder="หมายเหตุเพิ่มเติม..."></textarea>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="form-actions">
+        <button class="btn-clear" onclick="clearForm()">🗑 ล้างข้อมูล</button>
+        <button class="btn-save" onclick="saveRecord()">💾 บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <!-- Firebase SDK (v9 Compatibility Mode for easy code structure) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<div class="page" id="page-records">
+  <div class="filter-bar">
+    <select id="fil-shift" onchange="renderRecords()">
+      <option value="">กะทั้งหมด</option>
+      <option value="กะ UHT เครื่อง 1">กะ UHT เครื่อง 1</option>
+      <option value="กะ UHT เครื่อง 8">กะ UHT เครื่อง 8</option>
+      <option value="กะพาส">กะพาส</option>
+      <option value="กะดึก">กะดึก</option>
+    </select>
+    <input type="date" id="fil-date" onchange="renderRecords()">
+    <button class="btn-reset" onclick="resetFilters()">↺ รีเซ็ต</button>
+    <span class="result-count" id="rec-count"></span>
+  </div>
+  <div class="s-card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
+            <th>ชื่องาน / กิจกรรม</th>
+            <th style="text-align:center">คนเข้าเครื่อง</th>
+            <th style="text-align:center">คนเหลือ</th>
+            <th>หมายเลขล็อต</th>
+            <th style="text-align:right">ผลงาน (หีบ)</th>
+            <th>หมายเหตุ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rec-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    <!-- App Logic Script -->
-    <script>
-        // --- 1. CONFIGURATION & FIREBASE INITIALIZATION ---
-        // วางการตั้งค่าคอนฟิก Firebase คลาวด์ของคุณตรงนี้
-        const firebaseConfig = {
-            databaseURL: "https://anucha2025idwork-prog-default-rtdb.asia-southeast1.firebasedatabase.app/"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const dbRef = database.ref("rework_records");
+<div class="page" id="page-daily">
+  <div class="s-card" style="margin-bottom:20px;">
+    <div class="s-card-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-size:13px;font-weight:600;color:var(--pu-dark);white-space:nowrap;">📅 เลือกวันที่:</label>
+        <input type="date" id="daily-date" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14px;color:var(--text);background:var(--card);outline:none;" onchange="renderDaily()">
+      </div>
+      <button onclick="renderDaily()" style="background:var(--pu-main);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">🔍 ดูรายงาน</button>
+      <div id="daily-empty-hint" style="font-size:13px;color:var(--text-sub);margin-left:4px;"></div>
+      
+      <div style="margin-left:auto; display:none; gap:8px;" id="daily-export-btns">
+        <button class="btn-export btn-excel" onclick="exportDailyExcel()" style="font-size:12px;padding:7px 14px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export Excel
+        </button>
+        <button class="btn-export btn-pdf" onclick="exportDailyPDF()" style="font-size:12px;padding:7px 14px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Export PDF
+        </button>
+      </div>
+    </div>
+  </div>
 
-        // Global Variable State
-        let allFetchedData = []; // เก็บข้อมูลแดชบอร์ดสรุป
-        let currentDayData = []; // เก็บข้อมูลตารางสำหรับ Filter
+  <div id="daily-report-content"></div>
+</div>
 
-        // --- 2. APP INITIALIZATION ON LOAD ---
-        window.addEventListener('DOMContentLoaded', () => {
-            // ตั้งค่าวันที่ปัจจุบันในช่อง Input ฟอร์ม
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('checkDate').value = today;
-            document.getElementById('filterDate').value = today;
-            
-            // แสดงวันที่ปัจจุบันใน Header ล็อคภาษาไทย
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('th-TH', options);
+<div class="toast" id="toast"></div>
 
-            // เริ่มติดตามข้อมูลแบบ Realtime จาก Firebase สำหรับวิเคราะห์ทำแดชบอร์ด
-            initDashboardSync();
-            // โหลดข้อมูลตารางของวันนี้
-            loadDailyReport();
-        });
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, get, child, push, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-        // --- 3. TAB NAVIGATION CONTROL ---
-        function switchTab(tabId) {
-            // ซ่อน Tab ทุกล็อค
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            // ลบสถานะปุ่ม Active
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
-                btn.classList.add('bg-slate-50', 'text-slate-600', 'hover:bg-slate-100');
-            });
+  // ─── FIREBASE CONFIGURATION ─────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyBtiNzLs38836KICpRgl1qxaqHkVvQeFRA",
+    authDomain: "kimproject-37433.firebaseapp.com",
+    databaseURL: "https://kimproject-37433-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "kimproject-37433",
+    storageBucket: "kimproject-37433.firebasestorage.app",
+    messagingSenderId: "781812879810",
+    appId: "1:781812879810:web:9f0c6f30e09c912c06065b",
+    measurementId: "G-RGCGVN6599"
+  };
 
-            // เปิด Tab เลือก
-            document.getElementById(tabId).classList.add('active');
-            // ทำไฮไลต์ปุ่มเลือก
-            const activeBtn = document.getElementById(`btn-${tabId}`);
-            activeBtn.classList.remove('bg-slate-50', 'text-slate-600', 'hover:bg-slate-100');
-            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
-        }
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db);
 
-        // --- 4. FORM DATA HANDLING & CREATE (PUSH TO CLOUD) ---
-        function handleFormSubmit(event) {
-            event.preventDefault();
+  // ─── DATA & CONFIG ───────────────────────────────────────
+  let records = [];
+  let nextId = 1;
 
-            // ดึงค่าออบเจกต์จากฟอร์มกรอก
-            const recordData = {
-                checkDate: document.getElementById('checkDate').value,
-                lotNo: document.getElementById('lotNo').value.trim().toUpperCase(),
-                boxId: document.getElementById('boxId').value.trim().toUpperCase(),
-                department: document.getElementById('department').value,
-                defectType: document.getElementById('defectType').value,
-                defectQty: parseInt(document.getElementById('defectQty').value) || 0,
-                inspectorName: document.getElementById('inspectorName').value.trim(),
-                remark: document.getElementById('remark').value.trim(),
-                timestamp: firebase.database.ServerValue.TIMESTAMP // บันทึกเวลาฝั่งเซิร์ฟเวอร์คลาวด์
-            };
+  // ─── INIT ────────────────────────────────────────────────
+  window.onload = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('f-date').value = today;
+    document.getElementById('daily-date').value = today;
+    document.getElementById('current-month').textContent =
+      new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+    
+    // แมปฟังก์ชันของระบบ Module เข้ากับระบบ onclick บนปุ่ม HTML เดิมของคุณ
+    window.switchTab = switchTab;
+    window.saveRecord = saveRecord;
+    window.clearForm = clearForm;
+    window.deleteRecord = deleteRecord;
+    window.resetFilters = resetFilters;
+    window.renderRecords = renderRecords;
+    window.exportExcel = exportExcel;
+    window.exportPDF = exportPDF;
+    window.renderDaily = renderDaily;
+    window.exportDailyExcel = exportDailyExcel;
+    window.exportDailyPDF = exportDailyPDF;
 
-            // ดันข้อมูลขึ้น Firebase คลาวด์ระบบจะสุ่ม ID อัตโนมัติไม่ซ้ำ
-            dbRef.push(recordData)
-                .then(() => {
-                    alert('🎉 สำเร็จ! บันทึกข้อมูลงาน Rework ขึ้นระบบคลาวด์เรียบร้อยแล้ว');
-                    resetForm();
-                    // บังคับเปลี่ยนแท็บไปดูตารางสรุปรายงานของวันที่บันทึกไปทันที
-                    document.getElementById('filterDate').value = recordData.checkDate;
-                    loadDailyReport();
-                    switchTab('daily-report-tab');
-                })
-                .catch((error) => {
-                    console.error("Firebase Error:", error);
-                    alert('❌ เกิดข้อผิดพลาดไม่สามารถส่งข้อมูลไปคลาวด์ได้: ' + error.message);
-                });
-        }
+    // ทำการดึงข้อมูลทั้งหมดจากคลาวด์ลงมาทันทีที่เปิดเว็บ
+    await loadRecords();
+  };
 
-        function resetForm() {
-            document.getElementById('reworkForm').reset();
-            // คืนค่าวันที่เป็นวันปัจจุบัน
-            document.getElementById('checkDate').value = new Date().toISOString().split('T')[0];
-        }
+  // ─── DATA MANAGEMENT (LOCAL + FIREBASE) ───────────────────
+  async function loadRecords() {
+    showToast('กำลังดึงข้อมูลจาก Firebase...', 'info');
+    try {
+      const snapshot = await get(child(dbRef, 'rework_records'));
+      if (snapshot.exists()) {
+        const firebaseData = snapshot.val();
+        records = Object.keys(firebaseData).map(key => ({
+          firebaseKey: key, 
+          ...firebaseData[key]
+        }));
+        nextId = records.length > 0 ? Math.max(...records.map(r => r.id || 0)) + 1 : 1;
+        localStorage.setItem('rework_records_local', JSON.stringify(records));
+        renderDashboard();
+        showToast('โหลดข้อมูลจากคลาวด์สำเร็จ', 'success');
+        return;
+      }
+    } catch (e) {
+      console.error("Firebase Error:", e);
+    }
 
-        // --- 5. READ DATA FOR DAILY REPORT TABLE ---
-        function loadDailyReport() {
-            const selectedDate = document.getElementById('filterDate').value;
-            if (!selectedDate) return;
+    // กรณีไม่มีเน็ต หรือ Firebase ว่างเปล่า
+    const localData = localStorage.getItem('rework_records_local');
+    if (localData) {
+      records = JSON.parse(localData);
+      nextId = records.length > 0 ? Math.max(...records.map(r => r.id || 0)) + 1 : 1;
+      showToast('โหมดออฟไลน์: ใช้ข้อมูลล่าสุดจากเครื่อง', 'info');
+    } else {
+      records = [];
+      nextId = 1;
+    }
+    renderDashboard();
+  }
 
-            // ดึงข้อมูลกรองตามวันที่ระบุจากคลาวด์โดยตรง
-            dbRef.orderByChild('checkDate').equalTo(selectedDate).once('value', (snapshot) => {
-                currentDayData = [];
-                if (snapshot.exists()) {
-                    snapshot.forEach((childSnapshot) => {
-                        currentDayData.push({
-                            id: childSnapshot.key,
-                            ...childSnapshot.val()
-                        });
-                    });
-                    // เรียงตามเวลาล่าสุดขึันก่อน
-                    currentDayData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                    document.getElementById('daily-export-btns').style.setProperty('display', 'flex', 'important');
-                } else {
-                    document.getElementById('daily-export-btns').style.setProperty('display', 'none', 'important');
-                }
-                // ประมวลผลวาดตาราง
-                filterTableData();
-            });
-        }
+  // ─── TABS ────────────────────────────────────────────────
+  function switchTab(id, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (id === 'dashboard') renderDashboard();
+    if (id === 'records')   renderRecords();
+    if (id === 'daily')     renderDaily();
+  }
 
-        // ตัวกรองย่อยฝั่ง Client ด้านในตาราง (Search text & Dropdown แผนก)
-        function filterTableData() {
-            const searchText = document.getElementById('filterSearch').value.toLowerCase();
-            const selectedDept = document.getElementById('filterDept').value;
-            const tbody = document.getElementById('reportTableBody');
-            
-            tbody.innerHTML = ''; // เคลียร์ตารางเดิม
+  // ─── HELPERS ─────────────────────────────────────────────
+  function fmtDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${parseInt(y)+543}`;
+  }
+  function shiftBadge(s) {
+    const map = {
+      'กะ UHT เครื่อง 1':'badge-uht1',
+      'กะ UHT เครื่อง 8':'badge-uht8',
+      'กะพาส':'badge-past',
+      'กะดึก':'badge-night'
+    };
+    return `<span class="badge ${map[s]||''}">${s}</span>`;
+  }
+  function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    if(!t) return;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    t.innerHTML = `${icon} ${msg}`;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
 
-            // คัดกรองข้อมูลตามเงื่อนไขย่อย
-            const filtered = currentDayData.filter(item => {
-                const matchSearch = item.lotNo.toLowerCase().includes(searchText) || item.boxId.toLowerCase().includes(searchText);
-                const matchDept = (selectedDept === 'ALL') || (item.department === selectedDept);
-                return matchSearch && matchDept;
-            });
+  // ─── DASHBOARD ────────────────────────────────────────────
+  function renderDashboard() {
+    const total = records.reduce((a,r) => a + Number(r.production), 0);
+    const workers = records.reduce((a,r) => a + Number(r.workers), 0);
+    const standby = records.reduce((a,r) => a + Number(r.standby), 0);
+    document.getElementById('kpi-production').textContent = total.toLocaleString();
+    document.getElementById('kpi-workers').textContent = workers;
+    document.getElementById('kpi-standby').textContent = standby;
+    document.getElementById('kpi-shifts').textContent = records.length;
 
-            // ตรวจสอบว่ามีข้อมูลเหลือไหม
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400"><i class="fa-solid fa-magnifying-glass-blur block text-2xl mb-1"></i>ไม่พบข้อมูลรายงานตรงตามเงื่อนไขที่เลือกในวันนี้</td></tr>`;
-                document.getElementById('summary-total-records').innerText = '0';
-                document.getElementById('summary-total-qty').innerText = '0';
-                return;
-            }
+    const tbody = document.getElementById('dash-tbody');
+    const last5 = [...records].reverse().slice(0, 5);
+    tbody.innerHTML = last5.map(r => `
+      <tr>
+        <td>${fmtDate(r.date)}</td>
+        <td>${shiftBadge(r.shift)}</td>
+        <td>${r.hours}</td>
+        <td style="max-width:220px">${r.task}</td>
+        <td style="text-align:center">${r.workers}</td>
+        <td style="text-align:center">${r.standby}</td>
+        <td style="font-size:12px;color:var(--text-sub)">${r.lot||'—'}</td>
+        <td style="text-align:right;font-weight:600;color:var(--pu-main)">${Number(r.production).toLocaleString()}</td>
+      </tr>`).join('') +
+      `<tr class="total-row">
+        <td colspan="4">รวมทั้งสิ้น (Total Summary)</td>
+        <td style="text-align:center">${workers}</td>
+        <td style="text-align:center">${standby}</td>
+        <td></td>
+        <td style="text-align:right">${total.toLocaleString()}</td>
+      </tr>`;
+  }
 
-            // ตัวแปรสะสมผลสรุปใต้ตาราง
-            let totalQty = 0;
+  // ─── FORM ────────────────────────────────────────────────
+  async function saveRecord() {
+    const date  = document.getElementById('f-date').value;
+    const shift = document.getElementById('f-shift').value;
+    const task  = document.getElementById('f-task').value.trim();
+    if (!date || !shift || !task) {
+      showToast('กรุณากรอก: วันที่, กะทำงาน และชื่องาน', 'error'); return;
+    }
 
-            // ลูปสร้างแถวตารางข้อมูล
-            filtered.forEach((item, index) => {
-                totalQty += item.defectQty;
-                
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/80 transition-colors";
-                tr.innerHTML = `
-                    <td class="py-3 px-4 text-center font-medium text-slate-400">${index + 1}</td>
-                    <td class="py-3 px-4 font-medium whitespace-nowrap">${formatShortDate(item.checkDate)}</td>
-                    <td class="py-3 px-4"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-mono px-2 py-0.5 rounded">${item.lotNo}</span></td>
-                    <td class="py-3 px-4 font-semibold text-slate-800">${item.boxId}</td>
-                    <td class="py-3 px-4"><span class="text-xs px-2 py-1 rounded font-medium ${getDeptBadgeClass(item.department)}">${item.department}</span></td>
-                    <td class="py-3 px-4 text-slate-600 font-medium">${item.defectType}</td>
-                    <td class="py-3 px-4 text-right font-bold text-slate-900">${item.defectQty.toLocaleString()}</td>
-                    <td class="py-3 px-4 text-slate-500 text-xs">${item.inspectorName}</td>
-                    <td class="py-3 px-4 max-w-xs truncate text-xs text-slate-400" title="${item.remark || '-'}">${item.remark || '<span class="text-slate-300">-</span>'}</td>
-                    <td class="py-3 px-4 text-center">
-                        <button onclick="deleteRecord('${item.id}', '${item.boxId}')" class="text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 p-1.5 rounded transition-colors" title="ลบข้อมูล">
-                            <i class="fa-solid fa-trash-can text-xs"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+    const currentId = nextId++;
+    const newRecord = {
+      id: currentId, date, shift,
+      hours:      document.getElementById('f-hours').value.trim(),
+      task,
+      workers:    parseInt(document.getElementById('f-workers').value) || 0,
+      standby:    parseInt(document.getElementById('f-standby').value) || 0,
+      lot:        document.getElementById('f-lot').value.trim(),
+      production: parseInt(document.getElementById('f-production').value) || 0,
+      remarks:    document.getElementById('f-remarks').value.trim()
+    };
 
-            // อัปเดตตัวเลขผลรวมท้ายตาราง
-            document.getElementById('summary-total-records').innerText = filtered.length;
-            document.getElementById('summary-total-qty').innerText = totalQty.toLocaleString();
-        }
+    showToast('กำลังบันทึกลงคลาวด์...', 'info');
+    try {
+      const newRecordRef = push(ref(db, 'rework_records'));
+      await set(newRecordRef, newRecord);
+      showToast('บันทึกข้อมูลลง Firebase คลาวด์สำเร็จ! 🎉');
+      clearForm();
+      await loadRecords(); 
+    } catch(e) {
+      console.error(e);
+      showToast('เกิดข้อผิดพลาดในการส่งข้อมูลชุดใหม่', 'error');
+    }
+  }
 
-        // --- 6. DELETE ACTION (REMOVE FROM CLOUD) ---
-        function deleteRecord(id, boxId) {
-            if (confirm(`⚠️ คุณแน่ใจหรือไม่ที่จะลบรายการบันทึกของหีบห่อ "${boxId}" นี้? ข้อมูลบนคลาวด์จะถูกลบถาวรทันที`)) {
-                dbRef.child(id).remove()
-                    .then(() => {
-                        alert('🗑️ ลบข้อมูลสำเร็จเรียบร้อยแล้ว!');
-                        loadDailyReport(); // รีตารางใหม่
-                    })
-                    .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
-            }
-        }
+  function clearForm() {
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+    ['f-shift','f-hours','f-lot','f-task','f-remarks'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    ['f-workers','f-standby','f-production'].forEach(id => {
+      document.getElementById(id).value = 0;
+    });
+  }
 
-        // --- 7. REALTIME DASHBOARD ANALYTICS SYNC ---
-        function initDashboardSync() {
-            // ใช้คำสั่ง .on เพื่อซิงค์ข้อมูลตลอดเวลาแบบ Realtime หากเครื่องอื่นเพิ่ม ข้อมูลแดชบอร์ดเครื่องเราจะขยับตามทันที
-            dbRef.on('value', (snapshot) => {
-                allFetchedData = [];
-                if (snapshot.exists()) {
-                    snapshot.forEach((child) => {
-                        allFetchedData.push(child.val());
-                    });
-                }
-                // ประมวลผลคำนวณและสร้างกราฟ Dashboard
-                calculateAndRenderDashboard();
-            });
-        }
+  // ─── RECORDS ─────────────────────────────────────────────
+  function renderRecords() {
+    const fs = document.getElementById('fil-shift').value;
+    const fd = document.getElementById('fil-date').value;
+    const filtered = records.filter(r => (!fs || r.shift===fs) && (!fd || r.date===fd));
+    document.getElementById('rec-count').textContent = `แสดง ${filtered.length} รายการ`;
+    const tbody = document.getElementById('rec-tbody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--text-sub)">ไม่พบข้อมูล</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map((r, i) => `
+      <tr>
+        <td style="color:var(--text-sub);font-size:12px">${i+1}</td>
+        <td>${fmtDate(r.date)}</td>
+        <td>${shiftBadge(r.shift)}</td>
+        <td>${r.hours}</td>
+        <td style="max-width:200px">${r.task}</td>
+        <td style="text-align:center">${r.workers}</td>
+        <td style="text-align:center">${r.standby}</td>
+        <td style="font-size:12px;color:var(--text-sub)">${r.lot||'—'}</td>
+        <td style="text-align:right;font-weight:600;color:var(--pu-main)">${Number(r.production).toLocaleString()}</td>
+        <td style="font-size:12px;color:var(--text-sub)">${r.remarks||'—'}</td>
+        <td><button class="del-btn" onclick="deleteRecord('${r.firebaseKey}')" title="ลบ">✕</button></td>
+      </tr>`).join('') +
+      `<tr class="total-row">
+        <td colspan="5">รวมทั้งสิ้น (Total)</td>
+        <td style="text-align:center">${filtered.reduce((a,r)=>a+r.workers,0)}</td>
+        <td style="text-align:center">${filtered.reduce((a,r)=>a+r.standby,0)}</td>
+        <td></td>
+        <td style="text-align:right">${filtered.reduce((a,r)=>a+Number(r.production),0).toLocaleString()}</td>
+        <td colspan="2"></td>
+      </tr>`;
+  }
 
-        function calculateAndRenderDashboard() {
-            if (allFetchedData.length === 0) {
-                // คืนค่าศูนย์หากระบบคลาวด์ว่างเปล่า
-                document.getElementById('dash-total-boxes').innerText = '0';
-                document.getElementById('dash-total-pieces').innerText = '0';
-                document.getElementById('dash-avg-defect').innerText = '0.0';
-                document.getElementById('dash-top-dept').innerText = '-';
-                document.getElementById('chart-defect-container').innerHTML = '<p class="text-center py-8 text-slate-400 text-sm">ไม่มีข้อมูลในคลาวด์</p>';
-                document.getElementById('chart-dept-container').innerHTML = '<p class="text-center py-8 text-slate-400 text-sm">ไม่มีข้อมูลในคลาวด์</p>';
-                return;
-            }
+  async function deleteRecord(firebaseKey) {
+    if (!firebaseKey || firebaseKey === 'undefined') {
+      showToast('ไม่พบคีย์ข้อมูลชิ้นนี้บนเซิร์ฟเวอร์', 'error'); return;
+    }
+    if (!confirm('ต้องการลบรายการนี้ออกจากคลาวด์ถาวรใช่ไหม?')) return;
+    
+    showToast('กำลังลบข้อมูล...', 'info');
+    try {
+      await remove(ref(db, `rework_records/${firebaseKey}`));
+      showToast('ลบรายการบนคลาวด์เรียบร้อย', 'success');
+      await loadRecords();
+    } catch(e) {
+      console.error(e);
+      showToast('ลบข้อมูลไม่สำเร็จ ตรวจสอบสัญญาณเครือข่าย', 'error');
+    }
+  }
 
-            let totalBoxes = allFetchedData.length;
-            let totalPieces = 0;
-            let deptCountMap = {};   // นับความถี่แผนก (จำนวนครั้ง)
-            let defectQtyMap = {};   // นับสัดส่วนอาการเสีย (จำนวนชิ้น)
+  function resetFilters() {
+    document.getElementById('fil-shift').value = '';
+    document.getElementById('fil-date').value = '';
+    renderRecords();
+  }
 
-            allFetchedData.forEach(item => {
-                totalPieces += item.defectQty;
-                
-                // สถิติแผนก
-                deptCountMap[item.department] = (deptCountMap[item.department] || 0) + 1;
-                // สถิติอาการเสีย
-                defectQtyMap[item.defectType] = (defectQtyMap[item.defectType] || 0) + item.defectQty;
-            });
+  // ─── EXPORT EXCEL ─────────────────────────────────────────
+  function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    const headers = [
+      'วันที่', 'กะทำงาน', 'เวลาทำงาน', 'ชื่องาน / กิจกรรม',
+      'จำนวนคนเข้าเครื่อง', 'คนเหลือ', 'หมายเลขล็อต',
+      'ผลงาน จำนวนหีบ', 'หมายเหตุ'
+    ];
+    const rows = records.map(r => [
+      fmtDate(r.date), r.shift, r.hours, r.task,
+      r.workers, r.standby, r.lot,
+      r.production, r.remarks
+    ]);
+    const totalRow = [
+      'รวมทั้งสิ้น', '', '', '',
+      records.reduce((a,r)=>a+r.workers,0),
+      records.reduce((a,r)=>a+r.standby,0), '',
+      records.reduce((a,r)=>a+Number(r.production),0), ''
+    ];
 
-            // ดึงแผนกที่เกิดสูงสุด
-            let topDeptName = '-';
-            let maxCount = -1;
-            for (let dept in deptCountMap) {
-                if (deptCountMap[dept] > maxCount) {
-                    maxCount = deptCountMap[dept];
-                    topDeptName = dept;
-                }
-            }
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['รายงานการปฏิบัติงานในแต่ละกะประจำวัน'],
+      ['ประจำเดือน:', new Date().toLocaleDateString('th-TH',{month:'long',year:'numeric'}),
+       '', '', '', '', 'ผู้ตรวจสอบ:', 'อนุชา / ดนุวัฒน์ / ศศินา', ''],
+      ['แผนก/สายการผลิต:', 'หีบห่อ UHT/PAST','','','','','หมายเหตุภาพรวม:','',''],
+      [],
+      headers,
+      ...rows,
+      totalRow
+    ]);
 
-            // ดันตัวเลขขึ้นการ์ดสถิติบนเว็บบอร์ด
-            document.getElementById('dash-total-boxes').innerText = totalBoxes.toLocaleString();
-            document.getElementById('dash-total-pieces').innerText = totalPieces.toLocaleString();
-            document.getElementById('dash-avg-defect').innerText = (totalPieces / totalBoxes).toFixed(1);
-            document.getElementById('dash-top-dept').innerText = topDeptName;
+    ws['!cols'] = [14,20,13,40,16,12,22,18,20].map(w => ({wch:w}));
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:8} }];
+    XLSX.utils.book_append_sheet(wb, ws, 'รายงานประจำวัน');
 
-            // --- วาดจำลองกราฟแท่งความคืบหน้า (Progress-based Bar Chart) ---
-            // 1. อาการเสีย
-            const defectContainer = document.getElementById('chart-defect-container');
-            defectContainer.innerHTML = '';
-            // เรียงลำดับจากเสียมากไปน้อย
-            const sortedDefects = Object.entries(defectQtyMap).sort((a, b) => b[1] - a[1]);
-            sortedDefects.forEach(([type, qty]) => {
-                const pct = ((qty / totalPieces) * 100).toFixed(1);
-                defectContainer.innerHTML += `
-                    <div class="space-y-1">
-                        <div class="flex justify-between text-xs font-medium text-slate-600">
-                            <span>${type}</span>
-                            <span class="font-bold text-slate-900">${qty.toLocaleString()} ชิ้น (${pct}%)</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-2">
-                            <div class="bg-indigo-600 h-2 rounded-full" style="width: ${pct}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
+    const shiftMap = {};
+    records.forEach(r => {
+      if (!shiftMap[r.shift]) shiftMap[r.shift] = { workers:0, standby:0, production:0, count:0 };
+      shiftMap[r.shift].workers    += r.workers;
+      shiftMap[r.shift].standby    += r.standby;
+      shiftMap[r.shift].production += Number(r.production);
+      shiftMap[r.shift].count++;
+    });
+    const sumRows = Object.entries(shiftMap).map(([s, v]) => [
+      s, v.count, v.workers, v.standby, v.production
+    ]);
+    const ws2 = XLSX.utils.aoa_to_sheet([
+      ['สรุปผลการทำงานแยกตามกะ'],
+      [],
+      ['กะทำงาน', 'จำนวนรายการ', 'คนเข้าเครื่อง', 'คนเหลือ', 'ผลงานรวม (หีบ)'],
+      ...sumRows,
+      ['รวมทั้งสิ้น',
+        records.length,
+        records.reduce((a,r)=>a+r.workers,0),
+        records.reduce((a,r)=>a+r.standby,0),
+        records.reduce((a,r)=>a+Number(r.production),0)
+      ]
+    ]);
+    ws2['!cols'] = [22,15,15,12,18].map(w=>({wch:w}));
+    ws2['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:4} }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'สรุปแยกตามกะ');
 
-            // 2. ฝ่าย/แผนก
-            const deptContainer = document.getElementById('chart-dept-container');
-            deptContainer.innerHTML = '';
-            const sortedDepts = Object.entries(deptCountMap).sort((a, b) => b[1] - a[1]);
-            sortedDepts.forEach(([dept, count]) => {
-                const pct = ((count / totalBoxes) * 100).toFixed(1);
-                deptContainer.innerHTML += `
-                    <div class="space-y-1">
-                        <div class="flex justify-between text-xs font-medium text-slate-600">
-                            <span>${dept}</span>
-                            <span class="font-bold text-indigo-950">${count.toLocaleString()} ครั้ง (${pct}%)</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-2">
-                            <div class="bg-amber-500 h-2 rounded-full" style="width: ${pct}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
+    const now = new Date();
+    const fname = `รายงานการทำงาน_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    showToast('Export Excel สำเร็จ! 📊');
+  }
 
-        // --- 8. EXPORT TO EXCEL FEATURE ---
-        function exportToExcel() {
-            if (currentDayData.length === 0) return;
-            const targetDate = document.getElementById('filterDate').value;
-            
-            // เตรียมจัดรูปแบบอาเรย์โครงสร้างข้อมูลสำหรับเขียนไฟล์ Excel ตารางภาษาไทย
-            const excelRows = currentDayData.map((item, idx) => ({
-                "ลำดับ": idx + 1,
-                "วันที่ตรวจพบ": item.checkDate,
-                "หมายเลขลอท (Lot No.)": item.lotNo,
-                "หมายเลขหีบห่อ (Box ID)": item.boxId,
-                "แผนกที่ตรวจพบ": item.department,
-                "อาการเสียที่พบ": item.defectType,
-                "จำนวนชิ้นงานเสีย": item.defectQty,
-                "ผู้ตรวจสอบ": item.inspectorName,
-                "บันทึกรายละเอียดเพิ่มเติม": item.remark || "-"
-            }));
+  // ─── EXPORT PDF ───────────────────────────────────────────
+  async function exportPDF() {
+    if (records.length === 0) { showToast('ไม่มีข้อมูลสำหรับ Export', 'error'); return; }
+    showToast('กำลังสร้าง PDF...', 'info');
 
-            // ใช้ไลบรารี SheetJS วาดชีต Excel
-            const worksheet = XLSX.utils.json_to_sheet(excelRows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Rework_Report");
+    async function captureEl(el) {
+      const prevDisplay = el.style.display;
+      el.style.display = 'block';
+      const canvas = await html2canvas(el, {
+        scale: 2, useCORS: true, backgroundColor: '#F8F7FF', logging: false,
+        scrollX: 0, scrollY: 0, windowWidth: el.scrollWidth,
+        width: el.scrollWidth, height: el.scrollHeight
+      });
+      el.style.display = prevDisplay;
+      return canvas;
+    }
 
-            // ตั้งชื่อไฟล์รายงานแยกตามวันที่ดึง
-            XLSX.writeFile(workbook, `Rework_Report_${targetDate}.xlsx`);
-        }
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pdfW = doc.internal.pageSize.getWidth();
+      const pdfH = doc.internal.pageSize.getHeight();
+      const pad  = 8;
 
-        // --- 9. HELPER UTILITY FUNCTIONS ---
-        function formatShortDate(dateStr) {
-            if (!dateStr) return '';
-            const [y, m, d] = dateStr.split('-');
-            return `${d}/${m}/${y}`;
-        }
+      const dashEl = document.getElementById('page-dashboard');
+      const canvas1 = await captureEl(dashEl);
+      const img1    = canvas1.toDataURL('image/jpeg', 0.95);
+      const scale1  = Math.min((pdfW - pad*2) / canvas1.width, (pdfH - pad*2) / canvas1.height);
+      const w1 = canvas1.width  * scale1;
+      const h1 = canvas1.height * scale1;
+      doc.addImage(img1, 'JPEG', (pdfW - w1) / 2, pad, w1, h1);
 
-        function getDeptBadgeClass(dept) {
-            switch(dept) {
-                case 'QC': return 'bg-rose-50 text-rose-700 border border-rose-200';
-                case 'Production-A': return 'bg-indigo-50 text-indigo-700 border border-indigo-200';
-                case 'Production-B': return 'bg-purple-50 text-purple-700 border border-purple-200';
-                case 'Packing': return 'bg-amber-50 text-amber-700 border border-amber-200';
-                case 'Warehouse': return 'bg-slate-100 text-slate-700 border border-slate-300';
-                default: return 'bg-slate-50 text-slate-600';
-            }
-        }
-    </script>
+      doc.addPage();
+      const recEl = document.getElementById('page-records');
+      const prevClass = recEl.className;
+      recEl.style.display = 'block';
+      renderRecords();
+      await new Promise(r => setTimeout(r, 80));
+      const canvas2 = await captureEl(recEl);
+      recEl.style.display = prevClass.includes('active') ? 'block' : 'none';
+      const img2   = canvas2.toDataURL('image/jpeg', 0.95);
+      const scale2 = Math.min((pdfW - pad*2) / canvas2.width, (pdfH - pad*2) / canvas2.height);
+      const w2 = canvas2.width  * scale2;
+      const h2 = canvas2.height * scale2;
+      doc.addImage(img2, 'JPEG', (pdfW - w2) / 2, pad, w2, h2);
+
+      const now = new Date();
+      const fname = `รายงานการทำงาน_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.pdf`;
+      doc.save(fname);
+      showToast('Export PDF สำเร็จ! 📄');
+    } catch(e) {
+      console.error(e);
+      showToast('เกิดข้อผิดพลาดในการแปลงไฟล์ PDF', 'error');
+    }
+  }
+
+  // ─── DAILY REPORT ─────────────────────────────────────────
+  function renderDaily() {
+    const dateVal = document.getElementById('daily-date').value;
+    const content = document.getElementById('daily-report-content');
+    const exportBtns = document.getElementById('daily-export-btns');
+    const hint = document.getElementById('daily-empty-hint');
+
+    if (!dateVal) {
+      content.innerHTML = '';
+      if(exportBtns) exportBtns.style.display = 'none';
+      hint.textContent = 'กรุณาเลือกวันที่ก่อน';
+      return;
+    }
+
+    const dayRecords = records.filter(r => r.date === dateVal);
+    const dateLabel = new Date(dateVal + 'T00:00:00').toLocaleDateString('th-TH', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    const thaiDate = fmtDate(dateVal);
+
+    if (!dayRecords.length) {
+      content.innerHTML = `<div class="s-card"><div class="s-card-body" style="text-align:center;padding:3rem;color:var(--text-sub);">ไม่มีข้อมูลในวันที่ ${thaiDate}</div></div>`;
+      if(exportBtns) exportBtns.style.display = 'none';
+      hint.textContent = `ไม่พบข้อมูลในวันที่ ${thaiDate}`;
+      return;
+    }
+
+    hint.textContent = `พบ ${dayRecords.length} รายการ`;
+    if(exportBtns) exportBtns.style.display = 'flex';
+
+    const totalW = dayRecords.reduce((a,r)=>a+r.workers,0);
+    const totalS = dayRecords.reduce((a,r)=>a+r.standby,0);
+    const totalP = dayRecords.reduce((a,r)=>a+Number(r.production),0);
+
+    const kpiHtml = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+      <div class="kpi-card c1" data-icon="📦">
+        <div class="kpi-label">ผลผลิตรวม</div>
+        <div class="kpi-value" style="font-size:26px;">${totalP.toLocaleString()}</div>
+        <div class="kpi-sub">จำนวนหีบ</div>
+      </div>
+      <div class="kpi-card c2" data-icon="👷">
+        <div class="kpi-label">คนเข้าเครื่อง</div>
+        <div class="kpi-value" style="font-size:26px;">${totalW}</div>
+        <div class="kpi-sub">คนรวม</div>
+      </div>
+      <div class="kpi-card c3" data-icon="⏳">
+        <div class="kpi-label">คนRework</div>
+        <div class="kpi-value" style="font-size:26px;">${totalS}</div>
+        <div class="kpi-sub">คนรวม</div>
+      </div>
+      <div class="kpi-card c4" data-icon="🔄">
+        <div class="kpi-label">จำนวนกะ</div>
+        <div class="kpi-value" style="font-size:26px;">${dayRecords.length}</div>
+        <div class="kpi-sub">รายการ</div>
+      </div>
+    </div>`;
+
+    const shiftCards = dayRecords.map(r => `
+    <div class="s-card" style="margin-bottom:14px;">
+      <div class="s-card-head">
+        <div class="s-card-title">${shiftBadge(r.shift)} &nbsp;<span style="font-weight:400;color:var(--text-sub);font-size:13px;">เวลา ${r.hours||'—'}</span></div>
+      </div>
+      <div class="s-card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;font-size:14px;">
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ชื่องาน / กิจกรรม</div><div style="margin-top:4px;font-weight:500;">${r.task}</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเลขล็อต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเหตุ</div><div style="margin-top:4px;">${r.remarks||'—'}</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">คนเข้าเครื่อง</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--teal-dark);">${r.workers} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">คน</span></div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">คนRework</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:#C17D0F;">${r.standby} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">คน</span></div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ผลงาน (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
+        </div>
+      </div>
+    </div>`).join('');
+
+    const summaryRows = dayRecords.map((r,i) => `
+      <tr>
+        <td style="text-align:center;color:var(--text-sub);font-size:12px;">${i+1}</td>
+        <td>${shiftBadge(r.shift)}</td>
+        <td style="text-align:center;">${r.hours||'—'}</td>
+        <td>${r.task}</td>
+        <td style="text-align:center;">${r.workers}</td>
+        <td style="text-align:center;">${r.standby}</td>
+        <td style="font-size:12px;color:var(--text-sub);">${r.lot||'—'}</td>
+        <td style="text-align:right;font-weight:600;color:var(--pu-main);">${Number(r.production).toLocaleString()}</td>
+        <td style="font-size:12px;color:var(--text-sub);">${r.remarks||'—'}</td>
+      </tr>`).join('') +
+      `<tr class="total-row">
+        <td colspan="4">รวมประจำวัน</td>
+        <td style="text-align:center;">${totalW}</td>
+        <td style="text-align:center;">${totalS}</td>
+        <td></td>
+        <td style="text-align:right;">${totalP.toLocaleString()}</td>
+        <td></td>
+      </tr>`;
+
+    content.innerHTML = `
+    <div id="daily-capture">
+      <div style="background:linear-gradient(135deg,var(--pu-dark),var(--pu-main));border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="background:none; color:#fff;font-size:19px;font-weight:700;">รายงานการปฏิบัติงานประจำวัน</div>
+          <div style="color:rgba(255,255,255,.75);font-size:13px;margin-top:4px;">${dateLabel}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:rgba(255,255,255,.65);font-size:12px;">แผนก</div>
+          <div style="color:#fff;font-size:14px;font-weight:600;">หีบห่อ UHT/PAST</div>
+        </div>
+      </div>
+      ${kpiHtml}
+      <div class="s-card" style="margin-bottom:20px;">
+        <div class="s-card-head"><div class="s-card-title">📋 รายละเอียดแต่ละกะ</div></div>
+        <div class="s-card-body" style="padding:16px;">${shiftCards}</div>
+      </div>
+      <div class="s-card">
+        <div class="s-card-head"><div class="s-card-title">📊 ตารางสรุปประจำวัน</div></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>กะทำงาน</th><th>เวลา</th><th>ชื่องาน / กิจกรรม</th>
+              <th style="text-align:center">คนเข้า</th><th style="text-align:center">คนเหลือ</th>
+              <th>ล็อตนัมเบอร์</th><th style="text-align:right">ผลงาน (หีบ)</th><th>หมายเหตุ</th>
+            </tr></thead>
+            <tbody>${summaryRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ─── EXPORT DAILY EXCEL ───────────────────────────────────
+  function exportDailyExcel() {
+    const dateVal = document.getElementById('daily-date').value;
+    if (!dateVal) return;
+    const dayRecords = records.filter(r => r.date === dateVal);
+    if (!dayRecords.length) { showToast('ไม่มีข้อมูลในวันที่นี้', 'error'); return; }
+    const thaiDate = fmtDate(dateVal);
+    const wb = XLSX.utils.book_new();
+    const totalW = dayRecords.reduce((a,r)=>a+r.workers,0);
+    const totalS = dayRecords.reduce((a,r)=>a+r.standby,0);
+    const totalP = dayRecords.reduce((a,r)=>a+Number(r.production),0);
+    const headers = ['กะทำงาน','เวลาทำงาน','ชื่องาน / กิจกรรม','คนเข้าเครื่อง','คนเหลือ','หมายเลขล็อต','ผลงาน (หีบ)','หมายเหตุ'];
+    const rows = dayRecords.map(r => [r.shift, r.hours||'', r.task, r.workers, r.standby, r.lot||'', Number(r.production), r.remarks||'']);
+    const ws = XLSX.utils.aoa_to_sheet([
+      [`รายงานการปฏิบัติงานประจำวันที่ ${thaiDate}`],
+      ['แผนก:', 'หีบห่อ UHT/PAST','','','','','ผู้ตรวจสอบ:','อนุชา / ดนุวัฒน์ / ศศินา'],
+      [],
+      headers,
+      ...rows,
+      ['รวมประจำวัน','','',totalW,totalS,'',totalP,'']
+    ]);
+    ws['!cols'] = [22,13,42,16,12,22,18,22].map(w=>({wch:w}));
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} }];
+    XLSX.utils.book_append_sheet(wb, ws, `วันที่ ${thaiDate}`);
+    XLSX.writeFile(wb, `รายงานประจำวัน_${dateVal.replace(/-/g,'')}.xlsx`);
+    showToast('Export Excel สำเร็จ! 📊');
+  }
+
+  // ─── DAILY PDF ───────────────────────────────────────────
+  async function exportDailyPDF() {
+    const dateVal = document.getElementById('daily-date').value;
+    if (!dateVal) return;
+    const captureEl = document.getElementById('daily-capture');
+    if (!captureEl) { showToast('กรุณากด "ดูรายงาน" ก่อน Export', 'error'); return; }
+    showToast('กำลังสร้าง PDF...', 'info');
+    try {
+      const { jsPDF } = window.jspdf;
+      const canvas = await html2canvas(captureEl, {
+        scale: 2, useCORS: true, backgroundColor: '#F8F7FF', logging: false,
+        scrollX: 0, scrollY: 0, windowWidth: captureEl.scrollWidth,
+        width: captureEl.scrollWidth, height: captureEl.scrollHeight
+      });
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfW = doc.internal.pageSize.getWidth();
+      const pdfH = doc.internal.pageSize.getHeight();
+      const pad = 8;
+      const mmPerPx = (pdfW - pad*2) / canvas.width;
+      const pxPerPage = (pdfH - pad*2) / mmPerPx;
+      const numPages = Math.ceil(canvas.height / pxPerPage);
+      for (let i = 0; i < numPages; i++) {
+        if (i > 0) doc.addPage();
+        const sliceH = Math.min(pxPerPage, canvas.height - i * pxPerPage);
+        const sc = document.createElement('canvas');
+        sc.width = canvas.width; sc.height = sliceH;
+        sc.getContext('2d').drawImage(canvas, 0, -i * pxPerPage);
+        doc.addImage(sc.toDataURL('image/jpeg', 0.95), 'JPEG', pad, pad, pdfW - pad*2, sliceH * mmPerPx);
+      }
+      doc.save(`รายงานประจำวัน_${dateVal.replace(/-/g,'')}.pdf`);
+      showToast('Export PDF สำเร็จ! 📄');
+    } catch(e) {
+      console.error(e);
+      showToast('เกิดข้อผิดพลาดในการสร้างไฟล์ PDF', 'error');
+    }
+  }
+</script>
 </body>
 </html>
-
-```
