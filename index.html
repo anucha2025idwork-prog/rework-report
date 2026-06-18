@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -297,6 +298,18 @@
   @media print {
     .app-header, .tabs-wrap, .filter-bar, .del-btn, .form-actions { display: none; }
   }
+
+  /* ─── CHART FILTER BUTTONS ─── */
+  .chart-filter-btn {
+    padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+    background: none; font-family: 'Sarabun', sans-serif; font-size: 12px;
+    color: var(--text-sub); cursor: pointer; transition: all .15s; font-weight: 500;
+  }
+  .chart-filter-btn:hover { border-color: var(--pu-mid); color: var(--pu-main); }
+  .chart-filter-btn.active { background: var(--pu-main); color: #fff; border-color: var(--pu-main); }
+  /* ─── KPI CARD HOVER ─── */
+  .kpi-card { transition: transform .18s, box-shadow .18s; }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(67,61,139,.18); }
 </style>
 </head>
 <body>
@@ -329,34 +342,40 @@
 </nav>
 
 <div class="page active" id="page-dashboard">
-  <div class="month-row">
+
+  <!-- ── Top bar ── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px">
     <div>
-      <div style="font-size:20px;font-weight:700;color:var(--pu-dark)">ภาพรวมประจำเดือน</div>
-      <div style="font-size:13px;color:var(--text-sub);margin-top:3px">ข้อมูลอัปเดตอัตโนมัติจากการบันทึก</div>
+      <div style="font-size:21px;font-weight:700;color:var(--pu-dark);letter-spacing:-.3px">ภาพรวมประจำเดือน</div>
+      <div style="font-size:13px;color:var(--text-sub);margin-top:3px">ข้อมูลอัปเดตอัตโนมัติ · แผนกหีบห่อ UHT/PAST</div>
     </div>
-    <div class="dept-info">
-      <span><b>แผนก:</b> หีบห่อ UHT/PAST</span>
-      <span><b>ผู้ตรวจสอบ:</b> อนุชา / ดนุวัฒน์ / ศศินา</span>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:12.5px;color:var(--text-sub)"><b style="color:var(--pu-dark)">ผู้ตรวจสอบ:</b> อนุชา / ดนุวัฒน์ / ศศินา</span>
       <span class="month-badge" id="current-month"></span>
     </div>
   </div>
 
-  <div class="kpi-grid">
+  <!-- ── KPI Row ── -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+
     <div class="kpi-card c1" data-icon="📦">
       <div class="kpi-label">ผลผลิตรวม</div>
       <div class="kpi-value" id="kpi-production">0</div>
       <div class="kpi-sub">จำนวนหีบทั้งหมด</div>
     </div>
-    <div class="kpi-card c2" data-icon="👷">
+
+    <div class="kpi-card c2" data-icon="🔁">
+      <div class="kpi-label">Rework รวม (หีบ)</div>
+      <div class="kpi-value" id="kpi-rework-total">0</div>
+      <div class="kpi-sub">ผลงาน Rework ทุกผลิตภัณฑ์</div>
+    </div>
+
+    <div class="kpi-card c3" data-icon="👷">
       <div class="kpi-label">คนเข้าเครื่อง</div>
       <div class="kpi-value" id="kpi-workers">0</div>
       <div class="kpi-sub">คนทำงานรวม</div>
     </div>
-    <div class="kpi-card c3" data-icon="⏳">
-      <div class="kpi-label">คนRework</div>
-      <div class="kpi-value" id="kpi-standby">0</div>
-      <div class="kpi-sub">คนเหลือรวม</div>
-    </div>
+
     <div class="kpi-card c4" data-icon="🔄">
       <div class="kpi-label">รายการทั้งหมด</div>
       <div class="kpi-value" id="kpi-shifts">0</div>
@@ -364,17 +383,52 @@
     </div>
   </div>
 
+  <!-- ── Charts Row ── -->
+  <div style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:18px;margin-bottom:20px">
+
+    <!-- Bar chart: Rework by product -->
+    <div class="s-card" style="margin-bottom:0">
+      <div class="s-card-head" style="padding:14px 18px">
+        <div class="s-card-title">📊 ผลการ Rework แต่ละผลิตภัณฑ์ (หีบ)</div>
+        <div style="display:flex;gap:6px">
+          <button id="chart-filter-all"  class="chart-filter-btn active" onclick="setChartFilter('all')">ทั้งหมด</button>
+          <button id="chart-filter-uht"  class="chart-filter-btn" onclick="setChartFilter('uht')">UHT</button>
+          <button id="chart-filter-past" class="chart-filter-btn" onclick="setChartFilter('past')">PAST</button>
+        </div>
+      </div>
+      <div style="padding:16px 18px 18px">
+        <canvas id="reworkBarChart" height="210"></canvas>
+        <div id="chart-empty" style="display:none;text-align:center;padding:50px 0;color:var(--text-sub);font-size:13px">ยังไม่มีข้อมูล Rework</div>
+      </div>
+    </div>
+
+    <!-- Donut: share by shift -->
+    <div class="s-card" style="margin-bottom:0">
+      <div class="s-card-head" style="padding:14px 18px">
+        <div class="s-card-title">🥧 สัดส่วนผลผลิตแต่ละกะ</div>
+      </div>
+      <div style="padding:16px 18px 8px;display:flex;flex-direction:column;align-items:center">
+        <canvas id="shiftDonut" height="190" style="max-width:190px"></canvas>
+        <div id="donut-legend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:center;font-size:12.5px;color:var(--text-sub)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recent table ── -->
   <div class="s-card">
     <div class="s-card-head">
-      <div class="s-card-title">📋 สรุปการทำงานล่าสุด (5 รายการ)</div>
+      <div class="s-card-title">📋 รายการล่าสุด</div>
+      <span id="dash-record-count" style="font-size:12px;color:var(--text-sub)"></span>
     </div>
     <div class="tbl-wrap">
       <table id="dash-table">
         <thead>
           <tr>
             <th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
-            <th>ชื่องาน / กิจกรรม</th><th style="text-align:center">คนเข้าเครื่อง</th>
-            <th style="text-align:center">คนเหลือ</th><th>หมายเลขล็อต</th>
+            <th>ชื่องาน / กิจกรรม</th>
+            <th style="text-align:center">คนเข้าเครื่อง</th>
+            <th style="text-align:center">คนเหลือ</th>
+            <th>หมายเลขล็อต</th>
             <th style="text-align:right">ผลงาน (หีบ)</th>
           </tr>
         </thead>
@@ -632,35 +686,195 @@
   }
 
   // ─── DASHBOARD ────────────────────────────────────────────
-  function renderDashboard() {
-    const total = records.reduce((a,r) => a + Number(r.production), 0);
-    const workers = records.reduce((a,r) => a + Number(r.workers), 0);
-    const standby = records.reduce((a,r) => a + Number(r.standby), 0);
-    document.getElementById('kpi-production').textContent = total.toLocaleString();
-    document.getElementById('kpi-workers').textContent = workers;
-    document.getElementById('kpi-standby').textContent = standby;
-    document.getElementById('kpi-shifts').textContent = records.length;
+  let barChartInst = null, donutInst = null;
+  let currentChartFilter = 'all';
 
+  // Parse product name from task string → e.g. "จืด180", "หวาน200", "โกโก้"
+  function parseProduct(task) {
+    if (!task) return 'อื่นๆ';
+    const t = task.toLowerCase();
+    const patterns = [
+      { key:'จืด 180ml',   re:/จืด\s*180/ },
+      { key:'จืด 250ml',   re:/จืด\s*250/ },
+      { key:'หวาน 180ml',  re:/หวาน\s*180/ },
+      { key:'หวาน 250ml',  re:/หวาน\s*250/ },
+      { key:'โกโก้',       re:/โกโก้|coco/i },
+      { key:'ช็อกโกแลต',  re:/ช็อก|choco/i },
+      { key:'สตรอว์เบอร์รี่', re:/สตรอ|straw/i },
+      { key:'FR90',        re:/fr\s*90/i },
+      { key:'GDA',         re:/gda/i },
+    ];
+    for (const p of patterns) {
+      if (p.re.test(task)) return p.key;
+    }
+    // fallback: extract Thai word after "Rework "
+    const m = task.match(/rework\s+([฀-๿\w]+)/i);
+    if (m) return m[1];
+    return 'อื่นๆ';
+  }
+
+  function isReworkTask(task) {
+    return /rework/i.test(task || '');
+  }
+
+  function filterForChart(recs) {
+    if (currentChartFilter === 'uht')  return recs.filter(r => /uht/i.test(r.shift));
+    if (currentChartFilter === 'past') return recs.filter(r => /พาส|past/i.test(r.shift));
+    return recs;
+  }
+
+  window.setChartFilter = function(f) {
+    currentChartFilter = f;
+    document.querySelectorAll('.chart-filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('chart-filter-' + f).classList.add('active');
+    drawCharts();
+  };
+
+  function drawCharts() {
+    const filtered = filterForChart(records);
+    const reworkRecs = filtered.filter(r => isReworkTask(r.task));
+
+    // ── Bar: Rework by product ──────────────────────────────
+    const prodMap = {};
+    reworkRecs.forEach(r => {
+      const prod = parseProduct(r.task);
+      prodMap[prod] = (prodMap[prod] || 0) + Number(r.production);
+    });
+    const prodLabels = Object.keys(prodMap).sort((a,b) => prodMap[b]-prodMap[a]);
+    const prodData   = prodLabels.map(k => prodMap[k]);
+
+    const COLORS = ['#433D8B','#17C3B2','#F6A623','#E05C8A','#27AE60','#E74C3C','#8B5CF6','#06B6D4','#F59E0B'];
+    const barEmpty = document.getElementById('chart-empty');
+    const barCanvas = document.getElementById('reworkBarChart');
+
+    if (prodLabels.length === 0) {
+      barCanvas.style.display = 'none';
+      barEmpty.style.display = 'block';
+    } else {
+      barCanvas.style.display = 'block';
+      barEmpty.style.display = 'none';
+      if (barChartInst) barChartInst.destroy();
+      barChartInst = new Chart(barCanvas, {
+        type: 'bar',
+        data: {
+          labels: prodLabels,
+          datasets: [{
+            label: 'ผลงาน Rework (หีบ)',
+            data: prodData,
+            backgroundColor: prodLabels.map((_,i) => COLORS[i % COLORS.length] + 'CC'),
+            borderColor:     prodLabels.map((_,i) => COLORS[i % COLORS.length]),
+            borderWidth: 1.5,
+            borderRadius: 6,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ' ' + ctx.parsed.y.toLocaleString() + ' หีบ'
+              }
+            },
+            datalabels: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { family: 'Sarabun', size: 12 }, color: '#6B6B8A' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(180,175,220,.2)' },
+              ticks: {
+                font: { family: 'Sarabun', size: 11 }, color: '#6B6B8A',
+                callback: v => v.toLocaleString()
+              }
+            }
+          },
+          animation: { duration: 500, easing: 'easeOutQuart' }
+        }
+      });
+    }
+
+    // ── Donut: production by shift ──────────────────────────
+    const shiftMap = {};
+    filtered.forEach(r => {
+      shiftMap[r.shift] = (shiftMap[r.shift] || 0) + Number(r.production);
+    });
+    const sLabels = Object.keys(shiftMap).filter(k => shiftMap[k] > 0);
+    const sData   = sLabels.map(k => shiftMap[k]);
+    const SHIFT_COLORS = {
+      'กะ UHT เครื่อง 1': '#433D8B',
+      'กะ UHT เครื่อง 8': '#F6A623',
+      'กะพาส':            '#17C3B2',
+      'กะดึก':            '#E05C8A',
+    };
+    const sBgColors = sLabels.map(s => SHIFT_COLORS[s] || '#999');
+
+    if (donutInst) donutInst.destroy();
+    if (sLabels.length > 0) {
+      donutInst = new Chart(document.getElementById('shiftDonut'), {
+        type: 'doughnut',
+        data: { labels: sLabels, datasets: [{ data: sData, backgroundColor: sBgColors, borderWidth: 0, hoverOffset: 8 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '62%',
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.toLocaleString() + ' หีบ' } }
+          },
+          animation: { duration: 500 }
+        }
+      });
+    }
+
+    // Donut legend
+    const total = sData.reduce((a,b) => a+b, 0);
+    document.getElementById('donut-legend').innerHTML = sLabels.map((s,i) => `
+      <span style="display:flex;align-items:center;gap:5px">
+        <span style="width:10px;height:10px;border-radius:3px;background:${sBgColors[i]};flex-shrink:0"></span>
+        <span>${s}</span>
+        <b style="color:var(--pu-dark)">${total ? Math.round(sData[i]/total*100) : 0}%</b>
+      </span>`).join('');
+  }
+
+  function renderDashboard() {
+    const total   = records.reduce((a,r) => a + Number(r.production), 0);
+    const workers = records.reduce((a,r) => a + Number(r.workers), 0);
+    const reworkTotal = records.filter(r => isReworkTask(r.task)).reduce((a,r) => a + Number(r.production), 0);
+
+    document.getElementById('kpi-production').textContent  = total.toLocaleString();
+    document.getElementById('kpi-rework-total').textContent = reworkTotal.toLocaleString();
+    document.getElementById('kpi-workers').textContent     = workers;
+    document.getElementById('kpi-shifts').textContent      = records.length;
+
+    // Recent table
     const tbody = document.getElementById('dash-tbody');
-    const last5 = [...records].reverse().slice(0, 5);
-    tbody.innerHTML = last5.map(r => `
+    const sortedRecs = [...records].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const last8 = sortedRecs.slice(0, 8);
+    const totalStandby = records.reduce((a,r) => a + Number(r.standby), 0);
+    document.getElementById('dash-record-count').textContent = `แสดง ${last8.length} / ${records.length} รายการ`;
+    tbody.innerHTML = last8.map(r => `
       <tr>
         <td>${fmtDate(r.date)}</td>
         <td>${shiftBadge(r.shift)}</td>
         <td>${r.hours}</td>
-        <td style="max-width:220px">${r.task}</td>
+        <td style="max-width:230px">${r.task}</td>
         <td style="text-align:center">${r.workers}</td>
-        <td style="text-align:center">${r.standby}</td>
+        <td style="text-align:center">${r.standby||0}</td>
         <td style="font-size:12px;color:var(--text-sub)">${r.lot||'—'}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main)">${Number(r.production).toLocaleString()}</td>
       </tr>`).join('') +
       `<tr class="total-row">
         <td colspan="4">รวมทั้งสิ้น (Total Summary)</td>
         <td style="text-align:center">${workers}</td>
-        <td style="text-align:center">${standby}</td>
+        <td style="text-align:center">${totalStandby}</td>
         <td></td>
         <td style="text-align:right">${total.toLocaleString()}</td>
       </tr>`;
+
+    drawCharts();
   }
 
   // ─── FORM ────────────────────────────────────────────────
