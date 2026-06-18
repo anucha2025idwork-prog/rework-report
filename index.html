@@ -1140,12 +1140,12 @@
       </div>
       <div class="s-card-body">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;font-size:14px;">
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ชนิดผลิตภัณฑ์ที่ Rework</div><div style="margin-top:4px;font-weight:600;color:var(--pu-main);">${r.task}</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">จำนวนคนที่ใช้Rework (เข้าเครื่อง)</div><div style="margin-top:4px;">${r.workers} คน</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">คนเหลือ (Standby)</div><div style="margin-top:4px;">${r.standby} คน</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ล็อตการผลิต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเหตุ</div><div style="margin-top:4px;">${r.remarks||'—'}</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">จำนวนที่ได้ (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">ชนิดผลิตภัณฑ์ที่ Rework</div><div style="margin-top:4px;font-weight:600;color:var(--pu-main);">${r.task}</div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนคนที่เข้าเครื่อง</div><div style="margin-top:4px;">${r.workers} คน</div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนคนที่ใช้Rework (ไม่ได้เข้าเครื่อง) (Standby)</div><div style="margin-top:4px;">${r.standby} คน</div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">ล็อตการผลิต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">หมายเหตุ</div><div style="margin-top:4px;">${r.remarks||'—'}</div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนที่ได้ (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
         </div>
       </div>
     </div>`).join('');
