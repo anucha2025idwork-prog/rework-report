@@ -463,6 +463,7 @@
             <option value="นมจืด 180cc Shrink">นมจืด 180cc Shrink</option>
             <option value="นมจืด 180cc Non Shrink">นมจืด 180cc Non Shrink</option>
             <option value="นมจืด 90cc Shrink">นมจืด 90cc Shrink</option>
+             <option value="นมจืด 90cc Shrink">นมจืด 90cc ติดGDA</option>
             <option value="นมจืด 225cc Shrink">นมจืด 225cc Shrink</option>
             <option value="นมโกโก้ 90cc Shrink">นมโกโก้ 90cc Shrink</option>
             <option value="นมโกโก้ 225cc Shrink">นมโกโก้ 225cc Shrink</option>
@@ -765,12 +766,12 @@
     const ctx3 = document.getElementById('chart-products');
     if (ctx3) {
       const PRODUCT_NAMES = [
-        'นมจืด 180cc Shrink','นมจืด 180cc Non Shrink','นมจืด 90cc Shrink',
+        'นมจืด 180cc Shrink','นมจืด 180cc Non Shrink','นมจืด 90cc Shrink','นมจืด 90cc ติดGDA'
         'นมจืด 225cc Shrink','นมโกโก้ 90cc Shrink','นมโกโก้ 225cc Shrink',
         'นมเปรี้ยวรส ST 180cc','นมเปรี้ยวรส OR 180cc','นมเปรี้ยวรส MF 180cc'
       ];
       const PRODUCT_COLORS = [
-        '#433D8B','#17C3B2','#F6A623','#E05C8A','#27AE60',
+        '#433D8B','#17C3B2','#F6A623','#E05C8A','#27AE60','#00CC00'
         '#E74C3C','#8E44AD','#2980B9','#D35400'
       ];
       const productCounts = PRODUCT_NAMES.map(p => records.filter(r => r.task === p).length);
