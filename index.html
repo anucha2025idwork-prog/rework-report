@@ -1028,7 +1028,7 @@
       const prevDisplay = el.style.display;
       el.style.display = 'block';
       const canvas = await html2canvas(el, {
-        scale: 2, useCORS: true, backgroundColor: '#F8F7FF', logging: false,
+        scale: 3, useCORS: true, backgroundColor: '#F8F7FF', logging: false,
         scrollX: 0, scrollY: 0, windowWidth: el.scrollWidth,
         width: el.scrollWidth, height: el.scrollHeight
       });
@@ -1242,7 +1242,7 @@
     try {
       const { jsPDF } = window.jspdf;
       const canvas = await html2canvas(captureEl, {
-        scale: 2, useCORS: true, backgroundColor: '#F8F7FF', logging: false,
+        scale: 3, useCORS: true, backgroundColor: '#F8F7FF', logging: false,
         scrollX: 0, scrollY: 0, windowWidth: captureEl.scrollWidth,
         width: captureEl.scrollWidth, height: captureEl.scrollHeight
       });
