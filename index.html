@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -347,20 +348,60 @@
       <div class="kpi-value" id="kpi-production">0</div>
       <div class="kpi-sub">จำนวนหีบทั้งหมด</div>
     </div>
-    <div class="kpi-card c2" data-icon="👷">
-      <div class="kpi-label">คนเข้าเครื่อง</div>
-      <div class="kpi-value" id="kpi-workers">0</div>
-      <div class="kpi-sub">คนทำงานรวม</div>
+    <div class="kpi-card c2" data-icon="🥛">
+      <div class="kpi-label">สินค้า Rework สูงสุด</div>
+      <div class="kpi-value" style="font-size:18px;line-height:1.3" id="kpi-top-product">—</div>
+      <div class="kpi-sub" id="kpi-top-product-sub">รายการที่ Rework มากที่สุด</div>
     </div>
-    <div class="kpi-card c3" data-icon="⏳">
-      <div class="kpi-label">คนRework</div>
-      <div class="kpi-value" id="kpi-standby">0</div>
-      <div class="kpi-sub">คนเหลือรวม</div>
+    <div class="kpi-card c3" data-icon="🔢">
+      <div class="kpi-label">ชนิดสินค้า Rework</div>
+      <div class="kpi-value" id="kpi-product-types">0</div>
+      <div class="kpi-sub">ชนิดที่มีการ Rework</div>
     </div>
     <div class="kpi-card c4" data-icon="🔄">
       <div class="kpi-label">รายการทั้งหมด</div>
       <div class="kpi-value" id="kpi-shifts">0</div>
       <div class="kpi-sub">รายการที่บันทึก</div>
+    </div>
+  </div>
+
+  <!-- ─── CHART ROW ─── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="s-card">
+      <div class="s-card-head">
+        <div class="s-card-title">📦 ผลผลิต (หีบ) 7 วันล่าสุด</div>
+      </div>
+      <div class="s-card-body" style="padding:16px 20px;">
+        <div style="position:relative;height:220px;">
+          <canvas id="chart-production" role="img" aria-label="กราฟผลผลิตรายวัน 7 วันล่าสุด">ข้อมูลผลผลิตรายวัน</canvas>
+        </div>
+      </div>
+    </div>
+    <div class="s-card">
+      <div class="s-card-head">
+        <div class="s-card-title">🔄 สัดส่วนรายการแต่ละกะ</div>
+      </div>
+      <div class="s-card-body" style="padding:16px 20px;">
+        <div style="display:flex;align-items:center;gap:16px;height:220px;">
+          <div style="position:relative;flex:0 0 180px;height:180px;">
+            <canvas id="chart-shift" role="img" aria-label="กราฟวงกลมสัดส่วนแต่ละกะ">สัดส่วนกะทำงาน</canvas>
+          </div>
+          <div id="shift-legend" style="font-size:12px;color:#6B6B8A;line-height:2.2;flex:1;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="s-card" style="margin-bottom:20px;">
+    <div class="s-card-head">
+      <div class="s-card-title">🥛 สัดส่วนชนิดผลิตภัณฑ์ที่ Rework</div>
+    </div>
+    <div class="s-card-body" style="padding:16px 20px;">
+      <div style="display:flex;align-items:center;gap:20px;height:240px;">
+        <div style="position:relative;flex:0 0 200px;height:200px;">
+          <canvas id="chart-products" role="img" aria-label="กราฟสัดส่วนชนิดผลิตภัณฑ์ที่ Rework">สัดส่วนผลิตภัณฑ์</canvas>
+        </div>
+        <div id="product-legend" style="font-size:12px;color:#6B6B8A;line-height:2.0;flex:1;overflow-y:auto;max-height:220px;"></div>
+      </div>
     </div>
   </div>
 
@@ -373,8 +414,7 @@
         <thead>
           <tr>
             <th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
-            <th>ชื่องาน / กิจกรรม</th><th style="text-align:center">คนเข้าเครื่อง</th>
-            <th style="text-align:center">คนเหลือ</th><th>หมายเลขล็อต</th>
+            <th>ชนิดผลิตภัณฑ์ที่ Rework</th><th>หมายเลขล็อต</th>
             <th style="text-align:right">ผลงาน (หีบ)</th>
           </tr>
         </thead>
@@ -418,8 +458,19 @@
       </div>
       <div class="form-grid-1" style="margin-bottom:14px">
         <div class="form-group">
-          <label>ชื่องาน / กิจกรรม (Task / Activity) <span>*</span></label>
-          <input type="text" id="f-task" placeholder="เช่น Rework จืด180 Non shrink">
+          <label>ชนิดผลิตภัณฑ์ที่ Rework <span>*</span></label>
+          <select id="f-task">
+            <option value="">-- เลือกชนิดผลิตภัณฑ์ --</option>
+            <option value="นมจืด 180cc Shrink">นมจืด 180cc Shrink</option>
+            <option value="นมจืด 180cc Non Shrink">นมจืด 180cc Non Shrink</option>
+            <option value="นมจืด 90cc Shrink">นมจืด 90cc Shrink</option>
+            <option value="นมจืด 225cc Shrink">นมจืด 225cc Shrink</option>
+            <option value="นมโกโก้ 90cc Shrink">นมโกโก้ 90cc Shrink</option>
+            <option value="นมโกโก้ 225cc Shrink">นมโกโก้ 225cc Shrink</option>
+            <option value="นมเปรี้ยวรส ST 180cc">นมเปรี้ยวรส ST 180cc</option>
+            <option value="นมเปรี้ยวรส OR 180cc">นมเปรี้ยวรส OR 180cc</option>
+            <option value="นมเปรี้ยวรส MF 180cc">นมเปรี้ยวรส MF 180cc</option>
+          </select>
         </div>
       </div>
       <div class="form-grid-3" style="margin-bottom:14px">
@@ -470,7 +521,7 @@
         <thead>
           <tr>
             <th>#</th><th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
-            <th>ชื่องาน / กิจกรรม</th>
+            <th>ชนิดผลิตภัณฑ์ที่ Rework</th>
             <th style="text-align:center">คนเข้าเครื่อง</th>
             <th style="text-align:center">คนเหลือ</th>
             <th>หมายเลขล็อต</th>
@@ -631,15 +682,162 @@
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
+  // ─── CHART INSTANCES ─────────────────────────────────────
+  let chartProduction = null;
+  let chartShift = null;
+  let chartWorkers = null;
+
+  function renderCharts() {
+    // รวมข้อมูลตามวัน (7 วันล่าสุด)
+    const dayMap = {};
+    records.forEach(r => {
+      if (!dayMap[r.date]) dayMap[r.date] = { production: 0, workers: 0, standby: 0 };
+      dayMap[r.date].production += Number(r.production);
+      dayMap[r.date].workers   += Number(r.workers);
+      dayMap[r.date].standby   += Number(r.standby);
+    });
+    const sortedDays = Object.keys(dayMap).sort().slice(-7);
+    const dayLabels = sortedDays.map(d => fmtDate(d));
+    const prodData    = sortedDays.map(d => dayMap[d].production);
+    const workerData  = sortedDays.map(d => dayMap[d].workers);
+    const standbyData = sortedDays.map(d => dayMap[d].standby);
+
+    // สัดส่วนกะ
+    const shiftNames = ['กะ UHT เครื่อง 1','กะ UHT เครื่อง 8','กะพาส','กะดึก'];
+    const shiftColors = ['#433D8B','#F6A623','#17C3B2','#E05C8A'];
+    const shiftPatterns = ['', '--', '..', '-.'];
+    const shiftCounts = shiftNames.map(s => records.filter(r => r.shift === s).length);
+
+    // ─ กราฟ 1: ผลผลิตรายวัน ─
+    if (chartProduction) chartProduction.destroy();
+    const ctx1 = document.getElementById('chart-production');
+    if (ctx1) {
+      chartProduction = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: dayLabels,
+          datasets: [{
+            label: 'ผลผลิต (หีบ)',
+            data: prodData,
+            backgroundColor: 'rgba(67,61,139,0.75)',
+            borderColor: '#433D8B',
+            borderWidth: 1.5,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { font: { family: 'Sarabun', size: 11 }, color: '#6B6B8A' }, grid: { display: false }, ticks: { autoSkip: false, maxRotation: 30 } },
+            y: { ticks: { font: { family: 'Sarabun', size: 11 }, color: '#6B6B8A', callback: v => v.toLocaleString() }, grid: { color: 'rgba(0,0,0,0.06)' } }
+          }
+        }
+      });
+    }
+
+    // ─ กราฟ 2: Donut กะ ─
+    if (chartShift) chartShift.destroy();
+    const ctx2 = document.getElementById('chart-shift');
+    if (ctx2) {
+      chartShift = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: shiftNames,
+          datasets: [{
+            data: shiftCounts,
+            backgroundColor: shiftColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: { legend: { display: false } }
+        }
+      });
+      const totalShift = shiftCounts.reduce((a,b)=>a+b,0);
+      document.getElementById('shift-legend').innerHTML = shiftNames.map((s,i) =>
+        `<div style="display:flex;align-items:center;gap:7px;">
+          <span style="width:10px;height:10px;border-radius:2px;background:${shiftColors[i]};flex-shrink:0;"></span>
+          <span style="font-size:11.5px;">${s} <b style="color:#1A1A2E;">${shiftCounts[i]}</b> <span style="color:#aaa;">(${totalShift ? Math.round(shiftCounts[i]/totalShift*100) : 0}%)</span></span>
+        </div>`
+      ).join('');
+    }
+
+    // ─ กราฟ 3: Product Types Donut ─
+    if (chartWorkers) chartWorkers.destroy();
+    const ctx3 = document.getElementById('chart-products');
+    if (ctx3) {
+      const PRODUCT_NAMES = [
+        'นมจืด 180cc Shrink','นมจืด 180cc Non Shrink','นมจืด 90cc Shrink',
+        'นมจืด 225cc Shrink','นมโกโก้ 90cc Shrink','นมโกโก้ 225cc Shrink',
+        'นมเปรี้ยวรส ST 180cc','นมเปรี้ยวรส OR 180cc','นมเปรี้ยวรส MF 180cc'
+      ];
+      const PRODUCT_COLORS = [
+        '#433D8B','#17C3B2','#F6A623','#E05C8A','#27AE60',
+        '#E74C3C','#8E44AD','#2980B9','#D35400'
+      ];
+      const productCounts = PRODUCT_NAMES.map(p => records.filter(r => r.task === p).length);
+      const nonZeroNames  = PRODUCT_NAMES.filter((_,i) => productCounts[i] > 0);
+      const nonZeroCounts = productCounts.filter(c => c > 0);
+      const nonZeroColors = PRODUCT_COLORS.filter((_,i) => productCounts[i] > 0);
+
+      chartWorkers = new Chart(ctx3, {
+        type: 'doughnut',
+        data: {
+          labels: nonZeroNames,
+          datasets: [{
+            data: nonZeroCounts,
+            backgroundColor: nonZeroColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: { legend: { display: false } }
+        }
+      });
+      const totalProd = nonZeroCounts.reduce((a,b)=>a+b,0);
+      document.getElementById('product-legend').innerHTML = nonZeroNames.length
+        ? nonZeroNames.map((s,i) =>
+            `<div style="display:flex;align-items:center;gap:7px;">
+              <span style="width:10px;height:10px;border-radius:2px;background:${nonZeroColors[i]};flex-shrink:0;"></span>
+              <span style="font-size:11.5px;">${s} <b style="color:#1A1A2E;">${nonZeroCounts[i]}</b> <span style="color:#aaa;">(${totalProd ? Math.round(nonZeroCounts[i]/totalProd*100) : 0}%)</span></span>
+            </div>`
+          ).join('')
+        : '<div style="color:#aaa;font-size:12px;padding-top:4px;">ยังไม่มีข้อมูล</div>';
+    }
+  }
+
   // ─── DASHBOARD ────────────────────────────────────────────
   function renderDashboard() {
     const total = records.reduce((a,r) => a + Number(r.production), 0);
-    const workers = records.reduce((a,r) => a + Number(r.workers), 0);
-    const standby = records.reduce((a,r) => a + Number(r.standby), 0);
     document.getElementById('kpi-production').textContent = total.toLocaleString();
-    document.getElementById('kpi-workers').textContent = workers;
-    document.getElementById('kpi-standby').textContent = standby;
     document.getElementById('kpi-shifts').textContent = records.length;
+
+    // Product type counts
+    const productMap = {};
+    records.forEach(r => {
+      const p = r.task || '—';
+      productMap[p] = (productMap[p] || 0) + 1;
+    });
+    const productEntries = Object.entries(productMap).sort((a,b) => b[1]-a[1]);
+    const numTypes = productEntries.length;
+    document.getElementById('kpi-product-types').textContent = numTypes;
+    if (productEntries.length > 0) {
+      const [topName, topCount] = productEntries[0];
+      document.getElementById('kpi-top-product').textContent = topName;
+      document.getElementById('kpi-top-product-sub').textContent = `${topCount} รายการ`;
+    } else {
+      document.getElementById('kpi-top-product').textContent = '—';
+      document.getElementById('kpi-top-product-sub').textContent = 'ยังไม่มีข้อมูล';
+    }
+
+    renderCharts();
 
     const tbody = document.getElementById('dash-tbody');
     const last5 = [...records].reverse().slice(0, 5);
@@ -649,16 +847,11 @@
         <td>${shiftBadge(r.shift)}</td>
         <td>${r.hours}</td>
         <td style="max-width:220px">${r.task}</td>
-        <td style="text-align:center">${r.workers}</td>
-        <td style="text-align:center">${r.standby}</td>
         <td style="font-size:12px;color:var(--text-sub)">${r.lot||'—'}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main)">${Number(r.production).toLocaleString()}</td>
       </tr>`).join('') +
       `<tr class="total-row">
-        <td colspan="4">รวมทั้งสิ้น (Total Summary)</td>
-        <td style="text-align:center">${workers}</td>
-        <td style="text-align:center">${standby}</td>
-        <td></td>
+        <td colspan="5">รวมทั้งสิ้น (Total Summary)</td>
         <td style="text-align:right">${total.toLocaleString()}</td>
       </tr>`;
   }
@@ -669,7 +862,7 @@
     const shift = document.getElementById('f-shift').value;
     const task  = document.getElementById('f-task').value.trim();
     if (!date || !shift || !task) {
-      showToast('กรุณากรอก: วันที่, กะทำงาน และชื่องาน', 'error'); return;
+      showToast('กรุณากรอก: วันที่, กะทำงาน และชนิดผลิตภัณฑ์', 'error'); return;
     }
 
     const currentId = nextId++;
@@ -921,6 +1114,8 @@
     const totalS = dayRecords.reduce((a,r)=>a+r.standby,0);
     const totalP = dayRecords.reduce((a,r)=>a+Number(r.production),0);
 
+    const productTypes = [...new Set(dayRecords.map(r => r.task).filter(Boolean))];
+
     const kpiHtml = `
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
       <div class="kpi-card c1" data-icon="📦">
@@ -928,15 +1123,15 @@
         <div class="kpi-value" style="font-size:26px;">${totalP.toLocaleString()}</div>
         <div class="kpi-sub">จำนวนหีบ</div>
       </div>
-      <div class="kpi-card c2" data-icon="👷">
-        <div class="kpi-label">คนเข้าเครื่อง</div>
-        <div class="kpi-value" style="font-size:26px;">${totalW}</div>
-        <div class="kpi-sub">คนรวม</div>
+      <div class="kpi-card c2" data-icon="🥛">
+        <div class="kpi-label">ชนิดสินค้า Rework</div>
+        <div class="kpi-value" style="font-size:26px;">${productTypes.length}</div>
+        <div class="kpi-sub">ชนิดผลิตภัณฑ์</div>
       </div>
-      <div class="kpi-card c3" data-icon="⏳">
-        <div class="kpi-label">คนRework</div>
-        <div class="kpi-value" style="font-size:26px;">${totalS}</div>
-        <div class="kpi-sub">คนรวม</div>
+      <div class="kpi-card c3" data-icon="🔢">
+        <div class="kpi-label">สินค้า Rework สูงสุด</div>
+        <div class="kpi-value" style="font-size:14px;line-height:1.4;">${productTypes[0]||'—'}</div>
+        <div class="kpi-sub">ชนิดแรกในวันนี้</div>
       </div>
       <div class="kpi-card c4" data-icon="🔄">
         <div class="kpi-label">จำนวนกะ</div>
@@ -952,11 +1147,9 @@
       </div>
       <div class="s-card-body">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;font-size:14px;">
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ชื่องาน / กิจกรรม</div><div style="margin-top:4px;font-weight:500;">${r.task}</div></div>
+          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ชนิดผลิตภัณฑ์ที่ Rework</div><div style="margin-top:4px;font-weight:600;color:var(--pu-main);">${r.task}</div></div>
           <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเลขล็อต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
           <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">หมายเหตุ</div><div style="margin-top:4px;">${r.remarks||'—'}</div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">คนเข้าเครื่อง</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--teal-dark);">${r.workers} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">คน</span></div></div>
-          <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">คนRework</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:#C17D0F;">${r.standby} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">คน</span></div></div>
           <div><div style="color:var(--text-sub);font-size:11px;font-weight:600;text-transform:uppercase;">ผลงาน (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
         </div>
       </div>
@@ -968,17 +1161,12 @@
         <td>${shiftBadge(r.shift)}</td>
         <td style="text-align:center;">${r.hours||'—'}</td>
         <td>${r.task}</td>
-        <td style="text-align:center;">${r.workers}</td>
-        <td style="text-align:center;">${r.standby}</td>
         <td style="font-size:12px;color:var(--text-sub);">${r.lot||'—'}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main);">${Number(r.production).toLocaleString()}</td>
         <td style="font-size:12px;color:var(--text-sub);">${r.remarks||'—'}</td>
       </tr>`).join('') +
       `<tr class="total-row">
-        <td colspan="4">รวมประจำวัน</td>
-        <td style="text-align:center;">${totalW}</td>
-        <td style="text-align:center;">${totalS}</td>
-        <td></td>
+        <td colspan="5">รวมประจำวัน</td>
         <td style="text-align:right;">${totalP.toLocaleString()}</td>
         <td></td>
       </tr>`;
@@ -1005,8 +1193,7 @@
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>#</th><th>กะทำงาน</th><th>เวลา</th><th>ชื่องาน / กิจกรรม</th>
-              <th style="text-align:center">คนเข้า</th><th style="text-align:center">คนเหลือ</th>
+              <th>#</th><th>กะทำงาน</th><th>เวลา</th><th>ชนิดผลิตภัณฑ์ที่ Rework</th>
               <th>ล็อตนัมเบอร์</th><th style="text-align:right">ผลงาน (หีบ)</th><th>หมายเหตุ</th>
             </tr></thead>
             <tbody>${summaryRows}</tbody>
