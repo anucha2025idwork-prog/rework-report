@@ -227,6 +227,38 @@
   }
   .btn-clear:hover { background: var(--bg); color: var(--text); }
 
+  /* ─── PRODUCT MULTI-SELECT ─── */
+  .product-multi {
+    display: grid; grid-template-columns: repeat(1, 1fr); gap: 8px;
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 12px;
+    max-height: 320px; overflow-y: auto; background: var(--pu-pale);
+  }
+  .product-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--card); border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 7px 10px; transition: border-color .15s, background .15s;
+  }
+  .product-row.checked { border-color: var(--pu-mid); background: var(--pu-light); }
+  .product-check { display: flex; align-items: center; gap: 7px; cursor: pointer; flex: 1; min-width: 0; }
+  .product-check input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--pu-main); flex-shrink: 0; }
+  .product-check span { font-size: 13px; color: var(--text); }
+  .f-prod-lot {
+    width: 130px; padding: 6px 9px; border: 1.5px solid var(--border);
+    border-radius: 7px; font-family: 'Sarabun', sans-serif; font-size: 12.5px;
+    outline: none; background: var(--card); flex-shrink: 0;
+  }
+  .f-prod-lot:disabled { background: #F2F1F8; color: #aaa; cursor: not-allowed; }
+  .f-prod-lot:focus { border-color: var(--pu-mid); box-shadow: 0 0 0 3px rgba(107,94,189,.15); }
+  .f-prod-qty {
+    width: 84px; padding: 6px 9px; border: 1.5px solid var(--border);
+    border-radius: 7px; font-family: 'Sarabun', sans-serif; font-size: 12.5px;
+    outline: none; background: var(--card); flex-shrink: 0; text-align: right;
+  }
+  .f-prod-qty:disabled { background: #F2F1F8; color: #aaa; cursor: not-allowed; }
+  .f-prod-qty:focus { border-color: var(--pu-mid); box-shadow: 0 0 0 3px rgba(107,94,189,.15); }
+  .product-hint { font-size: 11.5px; color: var(--text-sub); margin-top: 5px; }
+  @media (max-width: 700px) { .product-multi { grid-template-columns: 1fr; } }
+
   /* ─── TOAST ─── */
   .toast {
     position: fixed; bottom: 28px; right: 28px;
@@ -413,7 +445,7 @@
         <thead>
           <tr>
             <th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
-            <th>ชนิดผลิตภัณฑ์ที่ Rework</th><th>ล็อตการผลิต</th>
+            <th>ชนิดผลิตภัณฑ์ที่ Rework / ล็อต</th>
             <th style="text-align:right">ผลงาน (หีบ)</th>
           </tr>
         </thead>
@@ -450,27 +482,12 @@
           <label>เวลาทำงาน (Working Hours)</label>
           <input type="text" id="f-hours" placeholder="เช่น 06-15, 12-21, 21-06">
         </div>
-        <div class="form-group">
-          <label>ล็อตการผลิต (Lot Number)</label>
-          <input type="text" id="f-lot" placeholder="เช่น 040227-M1">
-        </div>
       </div>
       <div class="form-grid-1" style="margin-bottom:14px">
         <div class="form-group">
-          <label>ชนิดผลิตภัณฑ์ที่ Rework <span>*</span></label>
-          <select id="f-task">
-            <option value="">-- เลือกชนิดผลิตภัณฑ์ --</option>
-            <option value="นมจืด 180cc Shrink">นมจืด 180cc Shrink</option>
-            <option value="นมจืด 180cc Non Shrink">นมจืด 180cc Non Shrink</option>
-            <option value="นมจืด 90cc Shrink">นมจืด 90cc Shrink</option>
-             <option value="นมจืด 90cc ติดGDA">นมจืด 90cc ติดGDA</option>
-            <option value="นมจืด 225cc Shrink">นมจืด 225cc Shrink</option>
-            <option value="นมโกโก้ 90cc Shrink">นมโกโก้ 90cc Shrink</option>
-            <option value="นมโกโก้ 225cc Shrink">นมโกโก้ 225cc Shrink</option>
-            <option value="นมเปรี้ยวรส ST 180cc">นมเปรี้ยวรส ST 180cc</option>
-            <option value="นมเปรี้ยวรส OR 180cc">นมเปรี้ยวรส OR 180cc</option>
-            <option value="นมเปรี้ยวรส MF 180cc">นมเปรี้ยวรส MF 180cc</option>
-          </select>
+          <label>ชนิดผลิตภัณฑ์ที่ Rework (เลือกได้มากกว่า 1 ชนิด) <span>*</span></label>
+          <div class="product-multi" id="f-products-container"></div>
+          <div class="product-hint">✔️ เลือกชนิดผลิตภัณฑ์ที่ต้องการ แล้วกรอกล็อตการผลิตและจำนวนที่ทำได้ (หีบ) ของแต่ละชนิด — ยอดรวมจะคำนวณให้อัตโนมัติด้านล่าง</div>
         </div>
       </div>
       <div class="form-grid-3" style="margin-bottom:14px">
@@ -483,8 +500,8 @@
           <input type="number" id="f-standby" min="0" value="0">
         </div>
         <div class="form-group">
-          <label>ผลงาน จำนวนหีบ (Actual Production)</label>
-          <input type="number" id="f-production" min="0" value="0">
+          <label>ผลงานรวมทั้งหมด (คำนวณอัตโนมัติจากแต่ละชนิด)</label>
+          <input type="number" id="f-production" min="0" value="0" readonly style="background:#F2F1F8;color:var(--pu-dark);font-weight:600;cursor:not-allowed;">
         </div>
       </div>
       <div class="form-grid-1">
@@ -495,8 +512,9 @@
       </div>
       <hr class="divider">
       <div class="form-actions">
+        <button class="btn-clear" id="cancel-edit-btn" style="display:none;border-color:#FBD5D5;color:var(--red);" onclick="cancelEdit()">✕ ยกเลิกการแก้ไข</button>
         <button class="btn-clear" onclick="clearForm()">🗑 ล้างข้อมูล</button>
-        <button class="btn-save" onclick="saveRecord()">💾 บันทึกข้อมูล</button>
+        <button class="btn-save" onclick="saveRecord()">💾 <span id="save-btn-text">บันทึกข้อมูล</span></button>
       </div>
     </div>
   </div>
@@ -527,10 +545,9 @@
         <thead>
           <tr>
             <th>#</th><th>วันที่</th><th>กะทำงาน</th><th>เวลา</th>
-            <th>ชนิดผลิตภัณฑ์ที่ Rework</th>
+            <th>ชนิดผลิตภัณฑ์ที่ Rework / ล็อต</th>
             <th style="text-align:center">คนเข้าเครื่อง</th>
             <th style="text-align:center">คนเหลือ</th>
-            <th>ล็อตการผลิต</th>
             <th style="text-align:right">ผลงาน (หีบ)</th>
             <th>หมายเหตุ</th>
             <th></th>
@@ -593,6 +610,18 @@
   // ─── DATA & CONFIG ───────────────────────────────────────
   let records = [];
   let nextId = 1;
+  let editingKey = null;
+  let editingId = null;
+
+  const PRODUCTS = [
+    'นมจืด 180cc Shrink','นมจืด 180cc Non Shrink','นมจืด 90cc Shrink','นมจืด 90cc ติดGDA',
+    'นมจืด 225cc Shrink','นมโกโก้ 90cc Shrink','นมโกโก้ 225cc Shrink',
+    'นมเปรี้ยวรส ST 180cc','นมเปรี้ยวรส OR 180cc','นมเปรี้ยวรส MF 180cc'
+  ];
+  const PRODUCT_COLORS = [
+    '#433D8B','#17C3B2','#F6A623','#E05C8A','#27AE60','#CC0033',
+    '#E74C3C','#8E44AD','#2980B9','#D35400'
+  ];
 
   // ─── INIT ────────────────────────────────────────────────
   window.onload = async () => {
@@ -601,11 +630,17 @@
     document.getElementById('daily-date').value = today;
     document.getElementById('current-month').textContent =
       new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
-    
+
+    buildProductForm();
+
     window.switchTab = switchTab;
     window.saveRecord = saveRecord;
     window.clearForm = clearForm;
     window.deleteRecord = deleteRecord;
+    window.editRecord = editRecord;
+    window.cancelEdit = cancelEdit;
+    window.toggleProductLot = toggleProductLot;
+    window.updateTotalProduction = updateTotalProduction;
     window.resetFilters = resetFilters;
     window.renderRecords = renderRecords;
     window.exportExcel = exportExcel;
@@ -616,6 +651,50 @@
 
     await loadRecords();
   };
+
+  // ─── PRODUCT MULTI-SELECT FORM ────────────────────────────
+  function buildProductForm() {
+    const container = document.getElementById('f-products-container');
+    container.innerHTML = PRODUCTS.map(p => `
+      <div class="product-row" data-task="${p}">
+        <label class="product-check">
+          <input type="checkbox" class="f-prod-check" value="${p}" onchange="toggleProductLot(this)">
+          <span>${p}</span>
+        </label>
+        <input type="text" class="f-prod-lot" placeholder="ล็อตการผลิต" disabled>
+        <input type="number" class="f-prod-qty" placeholder="จำนวน (หีบ)" min="0" disabled oninput="updateTotalProduction()">
+      </div>`).join('');
+  }
+
+  function toggleProductLot(checkbox) {
+    const row = checkbox.closest('.product-row');
+    const lotInput = row.querySelector('.f-prod-lot');
+    const qtyInput = row.querySelector('.f-prod-qty');
+    if (checkbox.checked) {
+      row.classList.add('checked');
+      lotInput.disabled = false;
+      qtyInput.disabled = false;
+      lotInput.focus();
+    } else {
+      row.classList.remove('checked');
+      lotInput.disabled = true;
+      lotInput.value = '';
+      qtyInput.disabled = true;
+      qtyInput.value = '';
+    }
+    updateTotalProduction();
+  }
+
+  function updateTotalProduction() {
+    let total = 0;
+    document.querySelectorAll('#f-products-container .product-row').forEach(row => {
+      const cb = row.querySelector('.f-prod-check');
+      if (cb.checked) {
+        total += parseInt(row.querySelector('.f-prod-qty').value) || 0;
+      }
+    });
+    document.getElementById('f-production').value = total;
+  }
 
   // ─── DATA MANAGEMENT (LOCAL + FIREBASE) ───────────────────
   async function loadRecords() {
@@ -675,6 +754,41 @@
       'QC Line':'badge-night'
     };
     return `<span class="badge ${map[s]||''}">${s}</span>`;
+  }
+  // Returns a normalized array of {task, lot, qty} for any record,
+  // including legacy records saved before multi-product support.
+  function getProducts(r) {
+    if (r && Array.isArray(r.products) && r.products.length) {
+      return r.products.map(p => ({ task: p.task, lot: p.lot || '', qty: p.qty != null ? p.qty : '' }));
+    }
+    if (r && r.task) return [{ task: r.task, lot: r.lot || '', qty: r.production || 0 }];
+    return [];
+  }
+  function productsTaskText(r) {
+    return getProducts(r).map(p => p.task).filter(Boolean).join(', ') || '—';
+  }
+  function productsLotText(r) {
+    return getProducts(r).map(p => p.lot).filter(Boolean).join(', ') || '—';
+  }
+  function productsHtml(r) {
+    const list = getProducts(r);
+    if (!list.length) return '—';
+    return list.map(p => {
+      const details = [];
+      if (p.lot) details.push(`ล็อต: ${p.lot}`);
+      if (p.qty !== '' && p.qty != null) details.push(`${Number(p.qty).toLocaleString()} หีบ`);
+      return `<div style="margin:1px 0;">${p.task}${details.length ? ` <span style="color:var(--text-sub);font-size:11px;">(${details.join(', ')})</span>` : ''}</div>`;
+    }).join('');
+  }
+  function productsExcelText(r) {
+    const list = getProducts(r);
+    if (!list.length) return '';
+    return list.map(p => {
+      const details = [];
+      if (p.lot) details.push(`ล็อต: ${p.lot}`);
+      if (p.qty !== '' && p.qty != null) details.push(`${p.qty} หีบ`);
+      return details.length ? `${p.task} (${details.join(', ')})` : p.task;
+    }).join('; ');
   }
   function showToast(msg, type='success') {
     const t = document.getElementById('toast');
@@ -765,17 +879,9 @@
     if (chartWorkers) chartWorkers.destroy();
     const ctx3 = document.getElementById('chart-products');
     if (ctx3) {
-      const PRODUCT_NAMES = [
-        'นมจืด 180cc Shrink','นมจืด 180cc Non Shrink','นมจืด 90cc Shrink','นมจืด 90cc ติดGDA',
-        'นมจืด 225cc Shrink','นมโกโก้ 90cc Shrink','นมโกโก้ 225cc Shrink',
-        'นมเปรี้ยวรส ST 180cc','นมเปรี้ยวรส OR 180cc','นมเปรี้ยวรส MF 180cc'
-      ];
-      const PRODUCT_COLORS = [
-        '#433D8B','#17C3B2','#F6A623','#E05C8A','#27AE60','#CC0033',
-        '#E74C3C','#8E44AD','#2980B9','#D35400'
-      ];
-      const productCounts = PRODUCT_NAMES.map(p => records.filter(r => r.task === p).length);
-      const nonZeroNames  = PRODUCT_NAMES.filter((_,i) => productCounts[i] > 0);
+      const allProductTasks = records.flatMap(r => getProducts(r).map(p => p.task));
+      const productCounts = PRODUCTS.map(p => allProductTasks.filter(t => t === p).length);
+      const nonZeroNames  = PRODUCTS.filter((_,i) => productCounts[i] > 0);
       const nonZeroCounts = productCounts.filter(c => c > 0);
       const nonZeroColors = PRODUCT_COLORS.filter((_,i) => productCounts[i] > 0);
 
@@ -816,8 +922,10 @@
 
     const productMap = {};
     records.forEach(r => {
-      const p = r.task || '—';
-      productMap[p] = (productMap[p] || 0) + 1;
+      getProducts(r).forEach(p => {
+        const name = p.task || '—';
+        productMap[name] = (productMap[name] || 0) + 1;
+      });
     });
     const productEntries = Object.entries(productMap).sort((a,b) => b[1]-a[1]);
     const numTypes = productEntries.length;
@@ -840,12 +948,11 @@
         <td>${fmtDate(r.date)}</td>
         <td>${shiftBadge(r.shift)}</td>
         <td>${r.hours}</td>
-        <td style="max-width:220px">${r.task}</td>
-        <td style="font-size:12px;color:var(--text-sub)">${r.lot||'—'}</td>
+        <td style="max-width:260px">${productsHtml(r)}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main)">${Number(r.production).toLocaleString()}</td>
       </tr>`).join('') +
       `<tr class="total-row">
-        <td colspan="5">รวมทั้งสิ้น (Total Summary)</td>
+        <td colspan="4">รวมทั้งสิ้น (Total Summary)</td>
         <td style="text-align:right">${total.toLocaleString()}</td>
       </tr>`;
   }
@@ -854,44 +961,132 @@
   async function saveRecord() {
     const date  = document.getElementById('f-date').value;
     const shift = document.getElementById('f-shift').value;
-    const task  = document.getElementById('f-task').value.trim();
-    if (!date || !shift || !task) {
-      showToast('กรุณากรอก: วันที่, กะทำงาน และชนิดผลิตภัณฑ์', 'error'); return;
+
+    const products = [];
+    document.querySelectorAll('#f-products-container .product-row').forEach(row => {
+      const cb = row.querySelector('.f-prod-check');
+      if (cb.checked) {
+        const lot = row.querySelector('.f-prod-lot').value.trim();
+        const qty = parseInt(row.querySelector('.f-prod-qty').value) || 0;
+        products.push({ task: cb.value, lot, qty });
+      }
+    });
+
+    if (!date || !shift || !products.length) {
+      showToast('กรุณากรอก: วันที่, กะทำงาน และเลือกชนิดผลิตภัณฑ์อย่างน้อย 1 ชนิด', 'error'); return;
     }
 
-    const currentId = nextId++;
-    const newRecord = {
-      id: currentId, date, shift,
+    const totalProduction = products.reduce((a,p) => a + (p.qty || 0), 0);
+
+    const recordData = {
+      date, shift,
       hours:      document.getElementById('f-hours').value.trim(),
-      task,
+      products,
+      task:       products.map(p => p.task).join(', '),
+      lot:        products.map(p => p.lot).filter(Boolean).join(', '),
       workers:    parseInt(document.getElementById('f-workers').value) || 0,
       standby:    parseInt(document.getElementById('f-standby').value) || 0,
-      lot:        document.getElementById('f-lot').value.trim(),
-      production: parseInt(document.getElementById('f-production').value) || 0,
+      production: totalProduction,
       remarks:    document.getElementById('f-remarks').value.trim()
     };
 
-    showToast('กำลังบันทึกลงคลาวด์...', 'info');
+    const isEditing = !!editingKey;
+    showToast(isEditing ? 'กำลังบันทึกการแก้ไข...' : 'กำลังบันทึกลงคลาวด์...', 'info');
     try {
-      const newRecordRef = push(ref(db, 'rework_records'));
-      await set(newRecordRef, newRecord);
-      showToast('บันทึกข้อมูลลง Firebase คลาวด์สำเร็จ! 🎉');
+      if (isEditing) {
+        recordData.id = editingId;
+        await set(ref(db, `rework_records/${editingKey}`), recordData);
+        showToast('แก้ไขข้อมูลสำเร็จ! ✏️');
+      } else {
+        recordData.id = nextId++;
+        const newRecordRef = push(ref(db, 'rework_records'));
+        await set(newRecordRef, recordData);
+        showToast('บันทึกข้อมูลลง Firebase คลาวด์สำเร็จ! 🎉');
+      }
       clearForm();
-      await loadRecords(); 
+      await loadRecords();
     } catch(e) {
       console.error(e);
-      showToast('เกิดข้อผิดพลาดในการส่งข้อมูลชุดใหม่', 'error');
+      showToast('เกิดข้อผิดพลาดในการส่งข้อมูล', 'error');
     }
+  }
+
+  function editRecord(firebaseKey) {
+    const r = records.find(x => x.firebaseKey === firebaseKey);
+    if (!r) { showToast('ไม่พบข้อมูลรายการนี้', 'error'); return; }
+
+    editingKey = firebaseKey;
+    editingId  = r.id;
+
+    document.getElementById('f-date').value = r.date || '';
+    document.getElementById('f-shift').value = r.shift || '';
+    document.getElementById('f-hours').value = r.hours || '';
+    document.getElementById('f-workers').value = r.workers || 0;
+    document.getElementById('f-standby').value = r.standby || 0;
+    document.getElementById('f-remarks').value = r.remarks || '';
+
+    const rows = document.querySelectorAll('#f-products-container .product-row');
+    rows.forEach(row => {
+      row.classList.remove('checked');
+      row.querySelector('.f-prod-check').checked = false;
+      const lotInput = row.querySelector('.f-prod-lot');
+      lotInput.value = '';
+      lotInput.disabled = true;
+      const qtyInput = row.querySelector('.f-prod-qty');
+      qtyInput.value = '';
+      qtyInput.disabled = true;
+    });
+    getProducts(r).forEach(p => {
+      const row = Array.from(rows).find(rw => rw.dataset.task === p.task);
+      if (row) {
+        row.classList.add('checked');
+        row.querySelector('.f-prod-check').checked = true;
+        const lotInput = row.querySelector('.f-prod-lot');
+        lotInput.disabled = false;
+        lotInput.value = p.lot || '';
+        const qtyInput = row.querySelector('.f-prod-qty');
+        qtyInput.disabled = false;
+        qtyInput.value = p.qty !== '' && p.qty != null ? p.qty : 0;
+      }
+    });
+    updateTotalProduction();
+
+    document.getElementById('save-btn-text').textContent = 'บันทึกการแก้ไข';
+    document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
+
+    switchTab('form', document.querySelectorAll('.tab-btn')[1]);
+    showToast('โหลดข้อมูลสำหรับแก้ไขแล้ว กรุณาตรวจสอบและกดบันทึก', 'info');
+  }
+
+  function cancelEdit() {
+    clearForm();
+    showToast('ยกเลิกการแก้ไขแล้ว', 'info');
   }
 
   function clearForm() {
     document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-    ['f-shift','f-hours','f-lot','f-task','f-remarks'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
+    document.getElementById('f-shift').value = '';
+    document.getElementById('f-hours').value = '';
+    document.getElementById('f-remarks').value = '';
     ['f-workers','f-standby','f-production'].forEach(id => {
       document.getElementById(id).value = 0;
     });
+    document.querySelectorAll('#f-products-container .product-row').forEach(row => {
+      row.classList.remove('checked');
+      row.querySelector('.f-prod-check').checked = false;
+      const lotInput = row.querySelector('.f-prod-lot');
+      lotInput.value = '';
+      lotInput.disabled = true;
+      const qtyInput = row.querySelector('.f-prod-qty');
+      qtyInput.value = '';
+      qtyInput.disabled = true;
+    });
+    editingKey = null;
+    editingId = null;
+    const saveText = document.getElementById('save-btn-text');
+    if (saveText) saveText.textContent = 'บันทึกข้อมูล';
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (cancelBtn) cancelBtn.style.display = 'none';
   }
 
   // ─── RECORDS ─────────────────────────────────────────────
@@ -902,7 +1097,7 @@
     document.getElementById('rec-count').textContent = `แสดง ${filtered.length} รายการ`;
     const tbody = document.getElementById('rec-tbody');
     if (!filtered.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--text-sub)">ไม่พบข้อมูล</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--text-sub)">ไม่พบข้อมูล</td></tr>`;
       return;
     }
     tbody.innerHTML = filtered.map((r, i) => `
@@ -911,19 +1106,20 @@
         <td>${fmtDate(r.date)}</td>
         <td>${shiftBadge(r.shift)}</td>
         <td>${r.hours}</td>
-        <td style="max-width:200px">${r.task}</td>
+        <td style="max-width:240px">${productsHtml(r)}</td>
         <td style="text-align:center">${r.workers}</td>
         <td style="text-align:center">${r.standby}</td>
-        <td style="font-size:12px;color:var(--text-sub)">${r.lot||'—'}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main)">${Number(r.production).toLocaleString()}</td>
         <td style="font-size:12px;color:var(--text-sub)">${r.remarks||'—'}</td>
-        <td><button class="del-btn" onclick="deleteRecord('${r.firebaseKey}')" title="ลบ">✕</button></td>
+        <td style="white-space:nowrap;">
+          <button class="del-btn" onclick="editRecord('${r.firebaseKey}')" title="แก้ไข">✏️</button>
+          <button class="del-btn" onclick="deleteRecord('${r.firebaseKey}')" title="ลบ">✕</button>
+        </td>
       </tr>`).join('') +
       `<tr class="total-row">
         <td colspan="5">รวมทั้งสิ้น (Total)</td>
         <td style="text-align:center">${filtered.reduce((a,r)=>a+r.workers,0)}</td>
         <td style="text-align:center">${filtered.reduce((a,r)=>a+r.standby,0)}</td>
-        <td></td>
         <td style="text-align:right">${filtered.reduce((a,r)=>a+Number(r.production),0).toLocaleString()}</td>
         <td colspan="2"></td>
       </tr>`;
@@ -938,6 +1134,7 @@
     showToast('กำลังลบข้อมูล...', 'info');
     try {
       await remove(ref(db, `rework_records/${firebaseKey}`));
+      if (editingKey === firebaseKey) clearForm();
       showToast('ลบรายการบนคลาวด์เรียบร้อย', 'success');
       await loadRecords();
     } catch(e) {
@@ -956,35 +1153,35 @@
   function exportExcel() {
     const wb = XLSX.utils.book_new();
     const headers = [
-      'วันที่', 'กะทำงาน', 'เวลาทำงาน', 'ชื่องาน / กิจกรรม',
-      'จำนวนคนเข้าเครื่อง', 'คนเหลือ', 'ล็อตการผลิต',
+      'วันที่', 'กะทำงาน', 'เวลาทำงาน', 'ชนิดผลิตภัณฑ์ที่ Rework / ล็อต',
+      'จำนวนคนเข้าเครื่อง', 'คนเหลือ',
       'ผลงาน จำนวนหีบ', 'หมายเหตุ'
     ];
     const rows = records.map(r => [
-      fmtDate(r.date), r.shift, r.hours, r.task,
-      r.workers, r.standby, r.lot,
+      fmtDate(r.date), r.shift, r.hours, productsExcelText(r),
+      r.workers, r.standby,
       r.production, r.remarks
     ]);
     const totalRow = [
       'รวมทั้งสิ้น', '', '', '',
       records.reduce((a,r)=>a+r.workers,0),
-      records.reduce((a,r)=>a+r.standby,0), '',
+      records.reduce((a,r)=>a+r.standby,0),
       records.reduce((a,r)=>a+Number(r.production),0), ''
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([
       ['รายงานการปฏิบัติงานในแต่ละกะประจำวัน'],
       ['ประจำเดือน:', new Date().toLocaleDateString('th-TH',{month:'long',year:'numeric'}),
-       '', '', '', '', 'ผู้ตรวจสอบ:', 'อนุชา / ดนุวัฒน์ / ศศินา', ''],
-      ['แผนก/สายการผลิต:', 'หีบห่อ UHT/PAST','','','','','หมายเหตุภาพรวม:','',''],
+       '', '', '', 'ผู้ตรวจสอบ:', 'อนุชา / ดนุวัฒน์ / ศศินา', ''],
+      ['แผนก/สายการผลิต:', 'หีบห่อ UHT/PAST','','','','หมายเหตุภาพรวม:','',''],
       [],
       headers,
       ...rows,
       totalRow
     ]);
 
-    ws['!cols'] = [14,20,13,40,16,12,22,18,20].map(w => ({wch:w}));
-    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:8} }];
+    ws['!cols'] = [14,20,13,46,16,12,18,20].map(w => ({wch:w}));
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} }];
     XLSX.utils.book_append_sheet(wb, ws, 'รายงานประจำวัน');
 
     const shiftMap = {};
@@ -1108,7 +1305,7 @@
     const totalS = dayRecords.reduce((a,r)=>a+r.standby,0);
     const totalP = dayRecords.reduce((a,r)=>a+Number(r.production),0);
 
-    const productTypes = [...new Set(dayRecords.map(r => r.task).filter(Boolean))];
+    const productTypes = [...new Set(dayRecords.flatMap(r => getProducts(r).map(p => p.task)).filter(Boolean))];
 
     const kpiHtml = `
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
@@ -1141,12 +1338,11 @@
       </div>
       <div class="s-card-body">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;font-size:14px;">
-          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">ชนิดผลิตภัณฑ์ที่ Rework</div><div style="margin-top:4px;font-weight:600;color:var(--pu-main);">${r.task}</div></div>
+          <div style="grid-column:span 2;"><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">ชนิดผลิตภัณฑ์ที่ Rework / ล็อต</div><div style="margin-top:4px;font-weight:600;color:var(--pu-main);">${productsHtml(r)}</div></div>
+          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนที่ได้ (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
           <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนคนที่เข้าเครื่อง</div><div style="margin-top:4px;">${r.workers} คน</div></div>
           <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนคนที่ใช้Rework (ไม่ได้เข้าเครื่อง) </div><div style="margin-top:4px;">${r.standby} คน</div></div>
-          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">ล็อตการผลิต</div><div style="margin-top:4px;">${r.lot||'—'}</div></div>
           <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">หมายเหตุ</div><div style="margin-top:4px;">${r.remarks||'—'}</div></div>
-          <div><div style="color:var(--text-sub);font-size:14px;font-weight:600;text-transform:uppercase;">จำนวนที่ได้ (หีบ)</div><div style="margin-top:4px;font-size:20px;font-weight:700;color:var(--pu-main);">${Number(r.production).toLocaleString()} <span style="font-size:12px;font-weight:400;color:var(--text-sub);">หีบ</span></div></div>
         </div>
       </div>
     </div>`).join('');
@@ -1156,10 +1352,9 @@
         <td style="text-align:center;color:var(--text-sub);font-size:12px;">${i+1}</td>
         <td>${shiftBadge(r.shift)}</td>
         <td style="text-align:center;">${r.hours||'—'}</td>
-        <td>${r.task}</td>
+        <td>${productsHtml(r)}</td>
         <td style="text-align:center;">${r.workers}</td>
         <td style="text-align:center;">${r.standby}</td>
-        <td style="font-size:12px;color:var(--text-sub);">${r.lot||'—'}</td>
         <td style="text-align:right;font-weight:600;color:var(--pu-main);">${Number(r.production).toLocaleString()}</td>
         <td style="font-size:12px;color:var(--text-sub);">${r.remarks||'—'}</td>
       </tr>`).join('') +
@@ -1167,7 +1362,6 @@
         <td colspan="4" style="text-align:right;padding-right:16px;">รวมประจำวัน</td>
         <td style="text-align:center;">${totalW}</td>
         <td style="text-align:center;">${totalS}</td>
-        <td></td>
         <td style="text-align:right;">${totalP.toLocaleString()}</td>
         <td></td>
       </tr>`;
@@ -1194,9 +1388,9 @@
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>#</th><th>กะทำงาน</th><th>เวลา</th><th>ชนิดผลิตภัณฑ์ที่ Rework</th>
+              <th>#</th><th>กะทำงาน</th><th>เวลา</th><th>ชนิดผลิตภัณฑ์ที่ Rework / ล็อต</th>
               <th style="text-align:center">คนเข้าเครื่อง</th><th style="text-align:center">คนเหลือ</th>
-              <th>ล็อตนัมเบอร์</th><th style="text-align:right">ผลงาน (หีบ)</th><th>หมายเหตุ</th>
+              <th style="text-align:right">ผลงาน (หีบ)</th><th>หมายเหตุ</th>
             </tr></thead>
             <tbody>${summaryRows}</tbody>
           </table>
@@ -1216,18 +1410,18 @@
     const totalW = dayRecords.reduce((a,r)=>a+r.workers,0);
     const totalS = dayRecords.reduce((a,r)=>a+r.standby,0);
     const totalP = dayRecords.reduce((a,r)=>a+Number(r.production),0);
-    const headers = ['กะทำงาน','เวลาทำงาน','ชื่องาน / กิจกรรม','คนเข้าเครื่อง','คนเหลือ','ล็อตการผลิต','ผลงาน (หีบ)','หมายเหตุ'];
-    const rows = dayRecords.map(r => [r.shift, r.hours||'', r.task, r.workers, r.standby, r.lot||'', Number(r.production), r.remarks||'']);
+    const headers = ['กะทำงาน','เวลาทำงาน','ชนิดผลิตภัณฑ์ที่ Rework / ล็อต','คนเข้าเครื่อง','คนเหลือ','ผลงาน (หีบ)','หมายเหตุ'];
+    const rows = dayRecords.map(r => [r.shift, r.hours||'', productsExcelText(r), r.workers, r.standby, Number(r.production), r.remarks||'']);
     const ws = XLSX.utils.aoa_to_sheet([
       [`รายงานการปฏิบัติงานประจำวันที่ ${thaiDate}`],
-      ['แผนก:', 'หีบห่อ UHT/PAST','','','','','ผู้ตรวจสอบ:','อนุชา / ดนุวัฒน์ / ศศินา'],
+      ['แผนก:', 'หีบห่อ UHT/PAST','','','ผู้ตรวจสอบ:','อนุชา / ดนุวัฒน์ / ศศินา'],
       [],
       headers,
       ...rows,
-      ['รวมประจำวัน','','',totalW,totalS,'',totalP,'']
+      ['รวมประจำวัน','','',totalW,totalS,totalP,'']
     ]);
-    ws['!cols'] = [22,13,42,16,12,22,18,22].map(w=>({wch:w}));
-    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} }];
+    ws['!cols'] = [22,13,46,16,12,18,22].map(w=>({wch:w}));
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:6} }];
     XLSX.utils.book_append_sheet(wb, ws, `วันที่ ${thaiDate}`);
     XLSX.writeFile(wb, `รายงานประจำวัน_${dateVal.replace(/-/g,'')}.xlsx`);
     showToast('Export Excel สำเร็จ! 📊');
